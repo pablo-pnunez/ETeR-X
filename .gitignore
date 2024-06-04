@@ -1,0 +1,14 @@
+/.idea/
+.vscode/*
+venv/*
+data/*
+models/**/*.pkl
+*.out
+*.log
+
+# No guardamos los modelos, muchos ocupan más de 100 mb
+*.data-00000-of-00001
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]

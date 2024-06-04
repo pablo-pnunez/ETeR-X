@@ -1,0 +1,35 @@
+{
+    "dataset_config": {
+        "bow_pct_words": 10,
+        "data_path": "/media/nas/datasets/tripadvisor/pois/",
+        "dataset": "pois",
+        "language": "es",
+        "lemmatization": true,
+        "min_df": 5,
+        "min_reviews_rst": 100,
+        "min_reviews_usr": 1,
+        "n_max_words": -50,
+        "presencia": false,
+        "remove_accents": true,
+        "remove_numbers": true,
+        "remove_stopwords": 2,
+        "save_path": "data/",
+        "seed": 100,
+        "subset": "london",
+        "test_dev_split": 0.1,
+        "text_column": "text",
+        "truncate_padding": true
+    },
+    "model": {
+        "model_version": "0",
+        "learning_rate": 0.001,
+        "final_learning_rate": 1e-05,
+        "epochs": 1000,
+        "batch_size": 512,
+        "seed": 100,
+        "early_st_first_epoch": 0,
+        "early_st_monitor": "val_loss",
+        "early_st_monitor_mode": "min",
+        "early_st_patience": 50
+    }
+}
