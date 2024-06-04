@@ -11,10 +11,6 @@ DATASETS["restaurants"]="gijon barcelona madrid newyorkcity paris"
 DATASETS["pois"]="barcelona madrid newyorkcity paris london"
 DATASETS["amazon"]="digital_music fashion"
 
-# DATASETS["restaurants"]="madrid newyorkcity paris"
-# DATASETS["amazon"]="digital_music fashion"
-# DATASETS["pois"]="barcelona madrid newyorkcity paris london"
-
 declare -A MODELS
 declare -A BATCHES
 declare -A LRATES
@@ -23,25 +19,9 @@ MODELS["MOSTPOP2ITM"]="0" # DA IGUAL PARA ESTE MODELO
 BATCHES["MOSTPOP2ITM"]="256" # DA IGUAL PARA ESTE MODELO
 LRATES["MOSTPOP2ITM"]="0.0" # DA IGUAL PARA ESTE MODELO
 
-# MODELS["ATT2ITM_2"]="0" 
-# BATCHES["ATT2ITM_2"]="512 1024"
-# LRATES["ATT2ITM_2"]="1e-5 5e-5 1e-4 5e-4"
-
 # MODELS["BOW2ITM"]="0" 
 # BATCHES["BOW2ITM"]="256 512 1024 2048 4096"
 # LRATES["BOW2ITM"]="1e-5 5e-5 1e-4 5e-4 1e-3" 
-
-# MODELS["ATT2ITM"]="0 1" 
-# BATCHES["ATT2ITM"]="512 1024 2048"
-# LRATES["ATT2ITM"]="1e-5 5e-5 1e-4 5e-4" 
-
-# MODELS["ATT2ITM"]="0" 
-# BATCHES["ATT2ITM"]="256 512 1024 2048 4096"
-# LRATES["ATT2ITM"]="5e-6 1e-5 5e-5 1e-4 5e-4" 
-
-# MODELS["ATT2ITM"]="2" 
-# BATCHES["ATT2ITM"]="64 128 256"
-# LRATES["ATT2ITM"]="5e-5 1e-4 5e-4" 
 
 # MODELS["USEM2ITM"]="0" 
 # BATCHES["USEM2ITM"]="512 1024 2048"
