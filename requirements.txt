@@ -1,0 +1,28 @@
+codecarbon==2.4.2
+cornac==1.18.0
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
+es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.5.0/es_core_news_sm-3.5.0-py3-none-any.whl
+fr_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.5.0/fr_core_news_sm-3.5.0-py3-none-any.whl
+gensim==4.3.1
+keras_nlp==0.7.0
+lime==0.2.0.1
+mapply==0.1.21
+matplotlib==3.8.2
+nltk==3.8.1
+numpy==1.26.4
+nvgpu==0.10.0
+pandas==1.4.1
+pyquery==2.0.0
+Requests==2.32.3
+scikit_learn==1.1.0
+seaborn==0.13.2
+spacy==3.5.3
+scipy==1.11.4
+spacy_langdetect==0.1.2
+tensorflow==2.15.0
+tensorflow_hub==0.15.0
+tensorflow_ranking==0.5.3
+tensorflow_text==2.15.0
+tqdm==4.66.1
+openpyxl==3.1.2
+ipykernel==6.29.0
