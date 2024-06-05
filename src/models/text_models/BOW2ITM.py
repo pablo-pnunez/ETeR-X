@@ -93,18 +93,18 @@ class BOW2ITM(RSTModel):
         rst_model = self.MODEL
         rst_model_weights = rst_model.get_layer("bow_2_rst").get_weights()[0]
 
-        # Predecir 5 restaurantes con la parte correspondiente del modelo
-        rev_rst_pred = rst_model.predict(normed_bow)
-        rev_rst_pred = np.apply_along_axis(lambda x: (-x).argsort()[:3], 1, rev_rst_pred)
+        # Predecir 4 restaurantes con la parte correspondiente del modelo
+        rev_rst_pred = rst_model.predict(normed_bow, verbose=0)
+        rev_rst_pred = np.apply_along_axis(lambda x: (-x).argsort()[:4], 1, rev_rst_pred)
         recommended_rests = rev_rst_pred.flatten()
 
         print("\n")
         print_g("\'%s\'" % text_src)
-        print("\LEMM: %s" % (text))
+        # print("\LEMM: %s" % (text))
         print("\tBOW: %s" % (",".join(bow_words)))
 
-        for rst in recommended_rests:
-            print("\t- %s" % (self.DATASET.DATA["TEST"].loc[self.DATASET.DATA["TEST"].id_item == rst]["name"].values[0]))
+        for idx, rst in enumerate(recommended_rests):
+            print(f'\t{idx+1}) {self.DATASET.DATA["TEST"].loc[self.DATASET.DATA["TEST"].id_item == rst]["name"].values[0]}' )
 
             # X Palabras más relevantes para predecir el restaurante seleccionado
             word_weights = rst_model_weights[:, rst]  # + rst_model_weights_bias
