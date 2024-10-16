@@ -95,8 +95,8 @@ class BOW2ITM(RSTModel):
 
         # Predecir 4 restaurantes con la parte correspondiente del modelo
         rev_rst_pred = rst_model.predict(normed_bow, verbose=0)
-        rev_rst_pred = np.apply_along_axis(lambda x: (-x).argsort()[:4], 1, rev_rst_pred)
-        recommended_rests = rev_rst_pred.flatten()
+        rev_rst_pred_id = np.apply_along_axis(lambda x: (-x).argsort()[:4], 1, rev_rst_pred)
+        recommended_rests = rev_rst_pred_id.flatten()
 
         print("\n")
         print_g("\'%s\'" % text_src)
