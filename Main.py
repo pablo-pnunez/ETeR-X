@@ -97,7 +97,11 @@ else:
                "lemmatization": lemmatization,
                "min_reviews_rst": min_reviews_rst, "min_reviews_usr": min_reviews_usr,
                "min_df": 5, "bow_pct_words": bow_pct_words, "presencia": False, "text_column": "text",  # BOW
-               "n_max_words": -50, "test_dev_split": .1, "truncate_padding": truncate_padding}
+               "n_max_words": -50, "test_dev_split": .1, "truncate_padding": truncate_padding,
+               # Marca de versión del preprocesado: fuerza una caché nueva (no pisa la de los experimentos
+               # originales) y documenta en cfg.json que este dataset usa el PoS tagging corregido
+               # (etiquetado sobre texto con mayúsculas/puntuación intactas, para no filtrar mal los PROPN).
+               "pos_tagging_fix": True}
 
 if dataset == "restaurants":
     # text_dataset = RestaurantDataset(dts_cfg, load=["TRAIN_DEV", "TEXT_TOKENIZER", "TEXT_SEQUENCES", "WORD_INDEX", "VOCAB_SIZE", "MAX_LEN_PADDING", "N_ITEMS", "FEATURES_NAME", "BOW_SEQUENCES"])

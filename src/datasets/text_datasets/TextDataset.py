@@ -115,6 +115,11 @@ class TextDataset(DatasetClass):
         # Preprocesar los textos
         # mapply.init(n_workers=-1, chunk_size=100, max_chunks_per_worker=8, progressbar=True)
 
+        # Guardamos el texto original (con mayúsculas/puntuación intactas) para el PoS tagging: es
+        # necesario para distinguir correctamente nombres propios (PROPN) de sustantivos comunes
+        # (NOUN), señal que spaCy pierde si se etiqueta ya en minúsculas.
+        rev["text_raw"] = rev["text"]
+
         # Primero preprocesamos el texto eliminando elementos básicos (a minusculas, quitar números)
         # rev["text"] = rev["text"].mapply(self.__preprocess_text_base__)
         rev["text"] = rev["text"].apply(self.__preprocess_text_base__)
@@ -125,7 +130,7 @@ class TextDataset(DatasetClass):
         if self.CONFIG["lemmatization"]:
             out_list = []
             lang_list = []
-            for doc in tqdm(self.NLP.pipe(rev["text"].tolist(), n_process=10), total=len(rev), desc="Lemmatization + PoS"):
+            for doc in tqdm(self.NLP.pipe(rev["text_raw"].tolist(), n_process=10), total=len(rev), desc="Lemmatization + PoS"):
                 # Hay que preprocesar la lemmatización, puede tener tildes y mayúsculas
                 # Creamos triplas palabra, lemma, pos
                 trias = [(str(f), self.__preprocess_text_base__(f.lemma_), f.pos_) for f in doc]
@@ -235,41 +240,15 @@ class TextDataset(DatasetClass):
                     vectorizer = CountVectorizer(stop_words=None, min_df=self.CONFIG["min_df"], max_features=None, binary=self.CONFIG["presencia"])
                     bow = vectorizer.fit_transform(all_data[self.CONFIG["text_column"]])
                     word_freq = np.asarray(bow.sum(axis=0))[0]
-
-                    # Hay que obtener el POS (part of speech) de cada palabra en su contexto (si hay varios, el más habitual)
-                    pos_values = np.array(["ADJ", "ADP", "ADV", "AUX", "CONJ", "CCONJ", "DET", "INTJ", "NOUN", "NUM", "PART", "PRON", "PROPN", "PUNCT", "SCONJ", "SYM", "VERB", "X", "SPACE"])
-
-                    # · Obtenemos los conjuntos relevantes
-                    RVW_CP = all_data[[self.CONFIG["text_column"]]].copy()
-                    # RVW_CP[self.CONFIG["text_column"]] = RVW_CP[self.CONFIG["text_column"]].apply(lambda x: x.split())                
                     features = vectorizer.get_feature_names_out()
-                    
-                    # · Luego se crear varias estructuras de datos para almacenar los valores de POS
-                    features_df = pd.DataFrame(zip(range(len(features)), features), columns=["id_feature", "feature"])
-                    features_df = features_df.set_index("feature")
-                    pos_df = pd.DataFrame(zip(range(len(pos_values)), pos_values), columns=["id_pos", "pos"])
-                    pos_df = pos_df.set_index("pos")
-                    mtrx = np.zeros((len(features), len(pos_values)), dtype=int)
 
-                    # · Hacemos 32 batches para evitar sobrecarga de RAM
-                    batches = np.array_split(RVW_CP, 32)
-
-                    # · Para cada batch, obtener POS de sus palabras y almacenar valores en mtrx
-                    for idx, b in tqdm(enumerate(batches), desc="Features POS"):
-                        POS = list(self.NLP.pipe(b.text, n_process=8))  # 8 es lo mejor
-
-                        all_words = np.concatenate(list(map(lambda x: [(str(w), w.pos_) for w in x], POS)))
-                        all_df = pd.DataFrame(all_words, columns=["feature", "pos"])
-                        all_df = all_df.loc[all_df.feature.isin(features)].reset_index(drop=True)
-                        all_df = all_df.merge(features_df, on="feature").merge(pos_df, on="pos")
-                        all_df = all_df.groupby(["id_feature", "id_pos"]).apply(len).reset_index()
-
-                        mtrx[all_df.id_feature, all_df.id_pos] += all_df[0]
-
-                        del all_df, b, POS
-
-                    # · Obtener los POS de las features (más común)
-                    word_pos = pos_values[np.apply_along_axis(np.argmax, 1, mtrx)]
+                    # El PoS más habitual de cada lemma ya se calculó en __load_subset__ (pos_data),
+                    # etiquetando sobre el texto ORIGINAL (con mayúsculas/puntuación intactas) para no
+                    # perder la señal que distingue nombres propios (PROPN) de sustantivos comunes
+                    # (NOUN). Reutilizarlo aquí evita además re-etiquetar todo el corpus por segunda vez.
+                    lemma_pos_counts = pos_data.groupby(["lemma", "pos"]).agg(times=("times", "sum")).reset_index()
+                    word_pos_map = lemma_pos_counts.loc[lemma_pos_counts.groupby("lemma")["times"].idxmax()].set_index("lemma")["pos"]
+                    word_pos = pd.Series(features).map(word_pos_map).fillna("X").values
 
                     # Se alamacena todo en un DF para buscar X palabras más frecuentes que cumplan las exigencias
                     word_data = pd.DataFrame(zip(features, word_freq, word_pos), columns=["feature", "freq", "pos"]).sort_values("freq", ascending=False).reset_index(drop=True)

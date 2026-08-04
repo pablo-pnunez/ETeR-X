@@ -41,7 +41,15 @@ class KerasModelClass(ModelClass):
         """
         raise NotImplementedError
 
-    def train(self, dev=False, save_model=False, train_cfg={}, callbacks=[]):
+    def train(self, dev=False, save_model=False, train_cfg={}, callbacks=None):
+        # NOTA: 'callbacks=None' + lista nueva aqui (en vez de 'callbacks=[]' como default),
+        # porque un valor por defecto mutable se comparte entre TODAS las llamadas al metodo
+        # durante toda la vida del proceso: sin este fix, entrenar mas de un modelo (o mas de
+        # una fase dev/final) en el mismo proceso Python acumula LearningRateScheduler de
+        # llamadas anteriores, que se disparan todos a la vez y sobre-decaen el learning rate
+        # (puede llegar a volverse negativo) sin que el codigo original lo note, porque el
+        # pipeline original solo llama a train() una vez por proceso (un proceso por dataset).
+        callbacks = [] if callbacks is None else callbacks
 
         train_cfg = {"verbose": 2, "workers": 6, "class_weight": None, "max_queue_size": 20, "multiprocessing": True}
 
@@ -52,7 +60,8 @@ class KerasModelClass(ModelClass):
             train_dev_seq = self.get_train_dev_sequences(dev=dev)
             self.__train_model__(train_sequence=train_dev_seq, dev_sequence=None, save_model=save_model, train_cfg=train_cfg, callbacks=callbacks)
 
-    def __train_model__(self, train_sequence=None, dev_sequence=None, save_model=False, train_cfg={}, callbacks=[]):
+    def __train_model__(self, train_sequence=None, dev_sequence=None, save_model=False, train_cfg={}, callbacks=None):
+        callbacks = [] if callbacks is None else callbacks
 
         is_dev = dev_sequence is not None
 
