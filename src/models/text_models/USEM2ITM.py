@@ -10,14 +10,14 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import tensorflow_hub as hub
-import tensorflow_text as text 
+import tensorflow_text as text
 import tensorflow_ranking as tfr
 
 from sklearn.preprocessing import MultiLabelBinarizer
 
 
 class USEM2ITM(RSTModel):
-    """ Predecir, a partir de una review codificada mendiante USEM, el restaurante de la review """
+    """ Predict, from a review encoded with USEM, the restaurant the review is about """
 
     def __init__(self, config, dataset):
         RSTModel.__init__(self, config=config, dataset=dataset)
@@ -61,18 +61,25 @@ class USEM2ITM(RSTModel):
         return model
 
     def __create_tfdata__(self, dataframe):
-        
-        # Seleccionar del conjunto donde están todos los textos, los pertenecientes al cojunto "dataframe"
+
+        # Select, from the set holding all the texts, the ones belonging to "dataframe"
+        # NOTE: ALL_DATA can have duplicate reviewIds (identical rows repeated, verified in
+        # Amazon fashion/digital_music: same reviewId/userId/id_item/text). Without deduplicating, a
+        # .loc[] on an index with repeated keys returns ALL matching rows for
+        # each queried key, making "text_data" longer than "dataframe" and misaligning the
+        # rest of the array (a review's text paired with another review's id_item) when zip()
+        # is called below. See docs/reviews/analisis_revisiones.md.
         all_data = pd.read_pickle(self.DATASET.DATASET_PATH+"ALL_DATA")[["reviewId", "text"]]
+        all_data = all_data.drop_duplicates(subset="reviewId", keep="first")
         text_data = all_data.set_index("reviewId").loc[dataframe.reviewId.values]["text"].values
 
         seq_data = text_data
         rst_data = dataframe.id_item.values
-        
+
         data_x = tf.data.Dataset.from_tensor_slices(seq_data)
         data_y = tf.data.Dataset.from_tensor_slices(rst_data)
         data_y = data_y.map(lambda x: tf.one_hot(x, self.DATASET.DATA["N_ITEMS"]), num_parallel_calls=tf.data.AUTOTUNE)
-        
+
         return tf.data.Dataset.zip((data_x, data_y))
 
     def evaluate_text(self, text):
@@ -84,7 +91,7 @@ class USEM2ITM(RSTModel):
         # lstm_text = self.DATASET.DATA["TEXT_TOKENIZER"].texts_to_sequences([self.DATASET.prerpocess_text(text)])
         # lstm_text_pad = tf.keras.preprocessing.sequence.pad_sequences(lstm_text, maxlen=self.DATASET.DATA["MAX_LEN_PADDING"])
 
-        # Obtener para la review al completo, el top 3 de restaurantes predichos por el modelo
+        # Get, for the whole review, the top 3 restaurants predicted by the model
         # preds_rst = self.MODEL.predict(lstm_text_pad)
         preds_rst = self.MODEL.predict([text], verbose=0).flatten()
         preds_rst_best = np.argsort(-preds_rst)[:n_rsts]
@@ -93,7 +100,7 @@ class USEM2ITM(RSTModel):
             rst_name = self.DATASET.DATA["TRAIN_DEV"].loc[self.DATASET.DATA["TRAIN_DEV"].id_item == rst]["name"].values[0]
             print(f"\t[{preds_rst[rst]:0.2f}] {rst_name}")
 
-        # Para cada una de las palabras de la review, obtener el restaurante que más importancia le da
+        # For each word in the review, get the restaurant it weighs most heavily towards
         for w in text.split(" "):
             preds_wrd = self.MODEL.predict([w], verbose=0).flatten()
             preds_wrd_best = np.argsort(-preds_wrd)[:1][0]
@@ -101,13 +108,13 @@ class USEM2ITM(RSTModel):
             print(f"\t ·{w} [{preds_wrd.max():0.2f}] => {rst_word_name}")
 
     def explain_test_sample(self, test_real_sample):
-        '''Extraer con LIME las palabras relevantes del texto que se pasa como parámetro'''
+        '''Use LIME to extract the relevant words from the text passed as a parameter'''
 
-        # Obtenemos la lista de resutanrantes disponibles y creamos el explainer de LIME
+        # Get the list of available restaurants and create the LIME explainer
         class_names = self.DATASET.DATA["TRAIN_DEV"][["id_item", "name"]].sort_values("id_item").drop_duplicates().reset_index(drop=True)
         explainer = LimeTextExplainer(class_names=class_names.name.values)
 
-        # Función que llama LIME cada vez
+        # Function LIME calls each time
         def classifier(d):
             # takes a list of d strings and outputs a (d, k) numpy array with prediction probabilities, where k is the number of classes. For ScikitClassifiers , this is classifier.predict_proba.
             ret = []
@@ -121,11 +128,11 @@ class USEM2ITM(RSTModel):
 
             return np.row_stack(ret)
 
-        # El texto de la review y el id del restaurante
+        # The review's text and the restaurant's id
         text_instance = test_real_sample.text
         restaurant_id = test_real_sample.id_item
 
-        exp = explainer.explain_instance(text_instance, classifier, num_samples=500, num_features=10, labels=[restaurant_id])  # ftrs = 10 es el valor por defecto y samples = 5000
+        exp = explainer.explain_instance(text_instance, classifier, num_samples=500, num_features=10, labels=[restaurant_id])  # ftrs = 10 is the default value, and samples = 5000
         exp = dict(exp.as_list(label=restaurant_id))
 
         return {"max": max(exp.values()), "min": min(exp.values()), "values": exp}

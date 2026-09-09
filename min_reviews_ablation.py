@@ -1,27 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Ablacion del umbral minimo de reseñas por item (`min_reviews_rst`): el paper
-usa 100 sin mostrar sensibilidad a esta eleccion (el estandar habitual en RS
-es 5-20 interacciones). Se repite en los mismos datasets representativos que
-la ablacion de vocabulario (RST Gijon, POI London, Amazon Fashion), variando
-min_reviews_rst en {5, 20, 50, 100} y manteniendo fijos bow_pct_words=10 y el
-resto de hiperparametros (los ya elegidos por grid-search para cada dataset,
-Tabla 8).
+"""Ablation of the minimum-reviews-per-item threshold (`min_reviews_rst`): the
+paper uses 100 without showing sensitivity to this choice (the usual standard
+in RS is 5-20 interactions). Repeated on the same representative datasets as
+the vocabulary ablation (RST Gijon, POI London, Amazon Fashion), varying
+min_reviews_rst over {5, 20, 50, 100} while keeping bow_pct_words=10 and the
+rest of the hyperparameters fixed (already chosen by grid search for each
+dataset, Table 8).
 
-A diferencia de la ablacion de vocabulario, cambiar min_reviews_rst cambia el
-universo de items en si (items con menos reseñas que el umbral se eliminan
-por completo, junto con todas sus reseñas): un umbral mas bajo retiene mas
-items (tarea potencialmente mas dificil, mas clases) y mas datos. Por tanto,
-ademas de NDCG@10/Recall@10 se registra N_ITEMS y el tamaño del TEST set en
-cada umbral, para poder contextualizar cualquier cambio en las metricas (no
-es directamente "el modelo mejora/empeora", puede ser "la tarea cambio").
+Unlike the vocabulary ablation, changing min_reviews_rst changes the item
+universe itself (items with fewer reviews than the threshold are removed
+entirely, along with all their reviews): a lower threshold keeps more items
+(a potentially harder task, more classes) and more data. So, besides
+NDCG@10/Recall@10, N_ITEMS and the TEST set size are recorded at each
+threshold, to contextualize any change in the metrics (it isn't necessarily
+"the model got better/worse", it could be "the task changed").
 
-min_reviews_rst=100 no se reentrena: ya existe como el checkpoint actual de
-BOW2ITM para cada dataset; sus metricas se leen directamente de ese checkpoint.
+min_reviews_rst=100 is not retrained: it already exists as the current
+BOW2ITM checkpoint for each dataset; its metrics are read directly from that checkpoint.
 
-Cada umbral se entrena en un proceso separado, mismo patron que
+Each threshold is trained in a separate process, same pattern as
 vocab_threshold_ablation.py.
 
-Uso: python min_reviews_ablation.py <dataset> <subset> <min_reviews> <dev|final|eval> [gpu]
+Usage: python min_reviews_ablation.py <dataset> <subset> <min_reviews> <dev|final|eval> [gpu]
   dataset/subset: restaurants/gijon, pois/london, amazon/fashion, ...
 """
 import json
@@ -45,9 +45,9 @@ from src.models.text_models.BOW2ITM import BOW2ITM
 
 DATASET_CLASSES = {"restaurants": RestaurantDataset, "pois": POIDataset, "amazon": AmazonDataset}
 
-# Mismos lr/batch que el checkpoint actual (min_reviews_rst=100) de cada
-# dataset (Tabla 8), para aislar el efecto del umbral sin reabrir la busqueda
-# de hiperparametros. Mismos 3 datasets que la ablacion de bow_pct_words.
+# Same lr/batch as the current checkpoint (min_reviews_rst=100) for each
+# dataset (Table 8), to isolate the effect of the threshold without
+# reopening the hyperparameter search. Same 3 datasets as the bow_pct_words ablation.
 DATASET_DEFAULTS = {
     ("restaurants", "gijon"): {
         "data_path": "/media/nas/datasets/tripadvisor/restaurants/", "language": "es",
@@ -119,27 +119,27 @@ elif mode == "final":
     model.train(dev=False, save_model=True)
 
 elif mode == "eval":
-    # Un proceso nuevo parte de pesos sin entrenar: hay que cargar los pesos finales
-    # explicitamente antes de evaluar.
+    # A new process starts from untrained weights: the final weights must be
+    # loaded explicitly before evaluating.
     model.train(dev=False, save_model=True)
-    # evaluate()/predict() usan CONFIG["model"]["batch_size"] (el de ENTRENAMIENTO,
-    # p.ej. 8192 para Amazon) para el batching interno. Con umbrales bajos de
-    # min_reviews el numero de items (n_items) puede crecer muy por encima de lo
-    # habitual (Amazon Fashion: 731 -> 27694 items a min_reviews=5), y algunas
-    # metricas full-catalog (Recall@50, NDCG@100, etc.) construyen tensores
-    # one-hot de tamaño batch x n_items (o mas), causando OOM en GPU con el
-    # batch de entrenamiento. Reducir el batch SOLO para evaluar es seguro: no
-    # afecta a los pesos ya entrenados ni a las rutas (MODEL_PATH ya fue fijado
-    # en __init__), solo al tamaño de los tensores intermedios en evaluate/predict.
+    # evaluate()/predict() use CONFIG["model"]["batch_size"] (the TRAINING one,
+    # e.g. 8192 for Amazon) for internal batching. With low min_reviews
+    # thresholds the number of items (n_items) can grow well beyond the usual
+    # range (Amazon Fashion: 731 -> 27694 items at min_reviews=5), and some
+    # full-catalog metrics (Recall@50, NDCG@100, etc.) build one-hot tensors
+    # of size batch x n_items (or larger), causing GPU OOM with the training
+    # batch size. Reducing the batch ONLY for evaluation is safe: it doesn't
+    # affect the already-trained weights or the paths (MODEL_PATH was already
+    # fixed in __init__), only the size of the intermediate tensors in evaluate/predict.
     if n_items > 5000:
-        # El peor caso visto (Recall@50 con broadcast_weights) usa un tensor
-        # ~ batch x 50 x n_items x 4 bytes; varias metricas full-catalog pueden
-        # coexistir sin liberarse dentro de la misma llamada a evaluate(), asi
-        # que se deja un margen generoso (presupuesto ~50MB por tensor de ese
-        # tipo) en vez de calcular el batch "justo".
+        # The worst case observed (Recall@50 with broadcast_weights) uses a tensor
+        # ~ batch x 50 x n_items x 4 bytes; several full-catalog metrics can
+        # coexist without being freed within the same evaluate() call, so a
+        # generous margin is left (~50MB budget per tensor of that kind)
+        # rather than computing the "exact" batch size.
         eval_batch = max(8, int(50e6 / (50 * n_items * 4)))
-        print(f"n_items={n_items} es grande; reduciendo batch de evaluacion de "
-              f"{model.CONFIG['model']['batch_size']} a {eval_batch} para evitar OOM", flush=True)
+        print(f"n_items={n_items} is large; reducing the evaluation batch from "
+              f"{model.CONFIG['model']['batch_size']} to {eval_batch} to avoid OOM", flush=True)
         model.CONFIG["model"]["batch_size"] = eval_batch
     ret = model.evaluate(test=True, user_info=True, verbose=True)
     user_agg = pd.read_csv(f"{model.MODEL_PATH}final_user_agg_eval.csv")
@@ -164,7 +164,7 @@ elif mode == "eval":
     rows = pd.read_csv(out_path).to_dict("records") if os.path.exists(out_path) else []
     rows = [r for r in rows if not (r["dataset"] == dataset_name and r["subset"] == subset_name and r["min_reviews"] == min_reviews)] + [row]
     pd.DataFrame(rows).sort_values(["dataset", "subset", "min_reviews"]).to_csv(out_path, index=False)
-    print(f"Guardado en {out_path}", flush=True)
+    print(f"Saved to {out_path}", flush=True)
 
 else:
-    raise ValueError(f"modo desconocido: {mode}")
+    raise ValueError(f"unknown mode: {mode}")

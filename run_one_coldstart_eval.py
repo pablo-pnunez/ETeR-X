@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-Reproduce, para un modelo/dataset ya entrenado, la evaluacion de la segunda
-tarea del paper (Section~\ref{sec:results_b}, "user cold-start"): mismos
-pesos que la primera tarea/"known users" (no se reentrena nada), pero
-filtrando TEST a solo usuarios que NO aparecen en TRAIN_DEV -- replica
-exactamente la logica de Main.py cuando known_users=False, que es la unica
-implementacion de ese filtro que existe en el repo (Baselines.py, el
-generador de la tabla de "known users" para los baselines CF, solo implementa
-el filtro contrario: quedarse con usuarios conocidos).
+Reproduces, for an already-trained model/dataset, the evaluation of the
+paper's second task (Section~\ref{sec:results_b}, "user cold-start"): the
+same weights as the first task/"known users" (nothing is retrained), but
+filtering TEST down to only users that do NOT appear in TRAIN_DEV -- this
+replicates exactly the logic Main.py uses when known_users=False, the only
+implementation of that filter that exists in the repo (Baselines.py, the
+generator of the "known users" table for the CF baselines, only implements
+the opposite filter: keep known users).
 
-Uso:
+Usage:
     python run_one_coldstart_eval.py --model BERT2ITM --dataset amazon --subset fashion --md5 7f21293988cf9aa7e9b2b02465f497e3
 """
 import argparse
@@ -48,26 +48,26 @@ mdl_cfg = {"model": cfg["model"], "session": {"gpu": args.gpu, "mixed_precision"
 
 text_dataset = DATASET_CLASSES[args.dataset](dts_cfg)
 
-# --- Filtro cold-start, replica exacta de Main.py known_users=False ---
+# --- Cold-start filter, exact replica of Main.py's known_users=False ---
 train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
 text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
 text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep='last', inplace=False)
-print(f"TEST cold-start (usuarios desconocidos): {len(text_dataset.DATA['TEST'])} reviews")
+print(f"Cold-start TEST (unknown users): {len(text_dataset.DATA['TEST'])} reviews")
 
 model = MODEL_CLASSES[args.model](mdl_cfg, text_dataset)
 
 if model.MD5 != args.md5:
-    print(f"FATAL: MD5 no coincide para {args.model}/{args.dataset}/{args.subset}: se obtuvo {model.MD5}, se esperaba {args.md5}")
+    print(f"FATAL: MD5 mismatch for {args.model}/{args.dataset}/{args.subset}: got {model.MD5}, expected {args.md5}")
     sys.exit(1)
 
 checkpoint_path = model.MODEL_PATH + "checkpoint"
 if not os.path.exists(checkpoint_path):
-    print(f"FATAL: no hay checkpoint final en {model.MODEL_PATH}")
+    print(f"FATAL: no final checkpoint at {model.MODEL_PATH}")
     sys.exit(1)
 
-# Carga los pesos ya entrenados (no reentrena)
+# Load the already-trained weights (no retraining)
 model.train(dev=False, save_model=True)
 
-# Evalua SOLO sobre el TEST ya filtrado a usuarios desconocidos
+# Evaluate ONLY on the TEST set already filtered to unknown users
 ret = model.evaluate(test=True, user_info=False, verbose=False)
 print(f"COLDSTART_RESULT {args.model} {args.dataset}/{args.subset} NDCG@10={ret['NDCG@10'].values[0]:.4f} Recall@10={ret['Recall@10'].values[0]:.4f}")

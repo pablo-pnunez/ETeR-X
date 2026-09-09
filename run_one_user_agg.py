@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-Script auxiliar para relanzar la evaluacion per-usuario (ver
-__per_user_ranking_eval__ en src/models/text_models/RSTModel.py) sobre un
-modelo final ya entrenado, sin reentrenar: train(dev=False, save_model=True)
-detecta el checkpoint existente en el MODEL_PATH (derivado del md5 de la
-config) y solo carga los pesos.
+Helper script to rerun the per-user evaluation (see __per_user_ranking_eval__
+in src/models/text_models/RSTModel.py) on an already-trained final model,
+without retraining: train(dev=False, save_model=True) detects the existing
+checkpoint at MODEL_PATH (derived from the config's md5) and just loads the
+weights.
 
-Pensado para invocarse una vez por (modelo, dataset, subset, md5), en un
-proceso independiente por combinacion (ver README para un ejemplo de bucle
-sobre todas las combinaciones a partir de models/best_models.csv), para
-evitar reutilizar la sesion de TensorFlow/GPU entre distintos modelos dentro
-del mismo proceso.
+Meant to be invoked once per (model, dataset, subset, md5), as its own
+process per combination (see the README for an example loop over every
+combination in models/best_models.csv), to avoid reusing the
+TensorFlow/GPU session across different models within the same process.
 
-Uso:
+Usage:
     python run_one_user_agg.py --model BOW2ITM --dataset pois --subset paris --md5 8d14e01f...
 """
 import argparse
@@ -24,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', required=True, choices=['BOW2ITM', 'USEM2ITM', 'BERT2ITM'])
 parser.add_argument('--dataset', required=True, choices=['restaurants', 'pois', 'amazon'])
 parser.add_argument('--subset', required=True)
-parser.add_argument('--md5', required=True, help="md5 de la carpeta final ya entrenada en models/<model>/<dataset>/<subset>/<md5>/")
+parser.add_argument('--md5', required=True, help="md5 of the already-trained final checkpoint under models/<model>/<dataset>/<subset>/<md5>/")
 parser.add_argument('--gpu', type=int, default=0)
 args = parser.parse_args()
 
@@ -44,7 +43,7 @@ MIXED_PRECISION = {"BOW2ITM": False, "USEM2ITM": True, "BERT2ITM": True}
 
 cfg_path = f"models/{args.model}/{args.dataset}/{args.subset}/{args.md5}/cfg.json"
 if not os.path.exists(cfg_path):
-    print(f"FATAL: no existe {cfg_path}")
+    print(f"FATAL: {cfg_path} does not exist")
     sys.exit(1)
 
 with open(cfg_path) as f:
@@ -57,18 +56,18 @@ text_dataset = DATASET_CLASSES[args.dataset](dts_cfg)
 model = MODEL_CLASSES[args.model](mdl_cfg, text_dataset)
 
 if model.MD5 != args.md5:
-    print(f"FATAL: MD5 no coincide para {args.model}/{args.dataset}/{args.subset}: se obtuvo {model.MD5}, se esperaba {args.md5}")
+    print(f"FATAL: MD5 mismatch for {args.model}/{args.dataset}/{args.subset}: got {model.MD5}, expected {args.md5}")
     sys.exit(1)
 
 checkpoint_path = model.MODEL_PATH + "checkpoint"
 if not os.path.exists(checkpoint_path):
-    print(f"FATAL: no hay checkpoint final en {model.MODEL_PATH}, habria que reentrenar (no se hace automaticamente aqui)")
+    print(f"FATAL: no final checkpoint at {model.MODEL_PATH}, it would need retraining (not done automatically here)")
     sys.exit(1)
 
-# Carga los pesos ya entrenados (no reentrena, ver KerasModelClass.__train_model__ linea ~110)
+# Load the already-trained weights (no retraining, see KerasModelClass.__train_model__ around line 110)
 model.train(dev=False, save_model=True)
 
-# Recalcula metricas per-review (ya existian) + per-usuario (nuevo), guarda final_user_agg_eval.csv
+# Recomputes per-review metrics (already existed) + per-user metrics (new), saves final_user_agg_eval.csv
 model.evaluate(test=True, user_info=True)
 
 print(f"DONE {args.model}/{args.dataset}/{args.subset}/{args.md5}")

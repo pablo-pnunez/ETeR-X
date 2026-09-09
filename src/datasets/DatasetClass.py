@@ -10,14 +10,14 @@ import collections
 class DatasetClass:
 
     def __init__(self, config, load):
-        self.CONFIG = dict(collections.OrderedDict(sorted(config.items())))  # Ordenar para evitar cambios en MD5
+        self.CONFIG = dict(collections.OrderedDict(sorted(config.items())))  # Sort to avoid spurious MD5 changes
         self.DATASET_PATH = self.CONFIG["save_path"] + self.__class__.__name__ + "/" + self.__get_md5__() + "/"
 
-        # Crear carpeta para el dataset
+        # Create the dataset's folder
         if not os.path.exists(self.DATASET_PATH):
             os.makedirs(self.DATASET_PATH, exist_ok=True)
 
-            # Crear json con la configuración del modelo
+            # Write the model configuration to a json file
             with open(self.DATASET_PATH + '/cfg.json', 'w') as fp:
                 json.dump(self.CONFIG, fp, indent=4)
 
@@ -25,11 +25,11 @@ class DatasetClass:
         else: self.DATA = self.get_data(load=load)
 
     def get_data(self):
-        """Retorna un diccionario con los datos"""
+        """Returns a dictionary with the data"""
         raise NotImplementedError
 
     def get_dict_data(self, file_path, load):
-        """Busca en 'file_path' los ficheros en 'load'"""
+        """Looks for the files in 'load' under 'file_path'"""
         ret_dict = {}
         # a[["seq","rating","id_restaurant", "dev"]]
         for d in load:
@@ -42,5 +42,5 @@ class DatasetClass:
             return False
 
     def __get_md5__(self):
-        """Obtiene un md5 a partir de la configuración del dataset"""
+        """Gets an MD5 hash from the dataset configuration"""
         return hashlib.md5(str(self.CONFIG).encode()).hexdigest()

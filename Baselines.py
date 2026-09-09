@@ -20,9 +20,13 @@ from src.datasets.text_datasets.AmazonDataset import AmazonDataset
 from src.datasets.text_datasets.POIDataset import POIDataset
 
 from src.models.text_models.USEM2ITM import USEM2ITM
-from src.models.text_models.att.ATT2ITM import ATT2ITM
 from src.models.text_models.BOW2ITM import BOW2ITM
 from src.models.text_models.BERT2ITM import BERT2ITM
+# ATT2ITM (src/models/text_models/att/) is not part of the published model and
+# has been removed from the repository; it is not imported here. The CF baselines
+# (BPR/EASE/BiVAE/MostPop/MF), which are what this script is about, come from
+# a separate Cornac Experiment() call, independent of this list of text
+# models, so they are unaffected.
 
 from cornac.metrics import Recall, Precision, FMeasure, NDCG
 from cornac.hyperopt import GridSearch, Discrete
@@ -36,10 +40,16 @@ import tensorflow as tf
 import pandas as pd
 import json
 
+try:
+    import torch  # noqa: F401 -- only used to check availability
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
 
 def load_set(dataset, subset):
 
-    models = ["USEM2ITM", "BERT2ITM", "ATT2ITM", "BOW2ITM"]
+    models = ["USEM2ITM", "BERT2ITM", "BOW2ITM"]
     eval_data = {}
 
     for model in models:
@@ -63,33 +73,32 @@ def load_set(dataset, subset):
         else:
             raise ValueError
 
-        # Primero se eliminan los usuarios que no están en train de los conjuntos de val y test
-        # Esto es solo para evaluar nuestro modelo en igualdad de condiciones
+        # First, remove from the val/test sets the users that are not in train
+        # This is only to evaluate our model under the same conditions
         # train_users = text_dataset.DATA["TRAIN_DEV"][text_dataset.DATA["TRAIN_DEV"]["dev"] == 0].userId.unique()
         train_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
         text_dataset.DATA["TRAIN_DEV"] = text_dataset.DATA["TRAIN_DEV"][text_dataset.DATA["TRAIN_DEV"]["userId"].isin(train_users)]
         text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][text_dataset.DATA["TEST"]["userId"].isin(train_users)]
         text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep='last', inplace=False)
 
-        # Evaluar nuestro modelo
-        if "ATT2ITM" == model: model_class = ATT2ITM(mdl_cfg, text_dataset)
-        elif "BOW2ITM" == model: model_class = BOW2ITM(mdl_cfg, text_dataset)
+        # Evaluate our model
+        if "BOW2ITM" == model: model_class = BOW2ITM(mdl_cfg, text_dataset)
         elif "USEM2ITM" == model: model_class = USEM2ITM(mdl_cfg, text_dataset)
         elif "BERT2ITM" == model: model_class = BERT2ITM(mdl_cfg, text_dataset)
-        else: raise NotImplementedError    
-        # Cargar el modelo y evaluar
+        else: raise NotImplementedError
+        # Load the model and evaluate
         model_class.train(dev=False, save_model=True)
         eval_data[model] = model_class.evaluate(test=True)
 
-    # Número de reseñas de cada usuario en train/dev (para separar resultados por usuario)
+    # Number of reviews per user in train/dev (to split results by user)
     train_dev_user_count = text_dataset.DATA["TRAIN_DEV"].groupby("userId").agg(cold=("userId","count")).reset_index()
 
-    # Luego se cargan los datos y se adaptan a Cornac
+    # Then load the data and adapt it to Cornac
     all_data = pd.read_pickle(f"{text_dataset.DATASET_PATH}ALL_DATA")
     all_data["rating"] /= 10
     all_data = all_data[["userId", "id_item", "rating", "dev", "test", "text"]]
 
-    # Eliminar usuarios desconocidos y dividir en 3 subconjuntos
+    # Remove unknown users and split into 3 subsets
     train_data = all_data[(all_data["dev"] == 0) & (all_data["test"] == 0)]
     train_users = train_data["userId"].unique()
     id_user, _ = pd.factorize(train_data["userId"])
@@ -109,8 +118,8 @@ def load_set(dataset, subset):
 
     # Instantiate a Base evaluation method using the provided train and test sets
     eval_method = BaseMethod.from_splits(train_data=train_data.to_records(index=False), val_data=val_data.to_records(index=False), test_data=test_data.to_records(index=False),  verbose=False, rating_threshold=1)
-    # OJO: lo anterior elimina las repeticiones de USUARIO, ITEM
-    # OJO: Si se pone un rating treshold, en test, por algún motivo se eliminan los menores de este. Con uno no pasa nada.
+    # NOTE: the above removes repeated USER, ITEM pairs
+    # NOTE: setting a rating threshold, in test, for some reason removes those below it. With 1 nothing happens.
 
     return eval_data, eval_method, train_dev_user_count
 
@@ -122,7 +131,7 @@ base_path = "models/Baselines"
 dataset = "restaurants" if args.dst is None else args.dst
 subset = "gijon" if args.sst is None else args.sst
 
-# Cargar los datos
+# Load the data
 eval_data, eval_method, train_dev_user_count = load_set(dataset, subset)
 
 user_id_map = pd.DataFrame(eval_method.test_set.uid_map.items(), columns=["userId", "id_user"])
@@ -141,11 +150,8 @@ md_ease = cornac.models.EASE(seed=seed, verbose=True)
 models = [
     cornac.models.MostPop(name="MostPop"),
     cornac.models.MF(use_bias=True),
-    cornac.models.OnlineIBPR(),
-    #cornac.models.BiVAECF(k=20, encoder_structure=[40], n_epochs=500, batch_size=128), # Con parámetros que aparecen en gitgub, pero va igual de mal
     GridSearch( model=md_bpr, space=[ Discrete("k", [25, 50]), Discrete("max_iter", [50, 100]), Discrete("learning_rate", [1e-4, 5e-4, 1e-3]), ], metric=NDCG(), eval_method=eval_method),
     GridSearch( model=md_ease, space=[ Discrete("posB", [True, False]), ], metric=NDCG(), eval_method=eval_method), # cornac.models.MF(seed=seed),  # Best parameter settings: {'k': 30, 'learning_rate': 5e-06, 'max_iter': 10}
-    cornac.models.BiVAECF(batch_size=(64 if dataset=="restaurants" and subset=="paris" else 100)),
 
     # cornac.models.MMMF(seed=seed),  # Best parameter settings: {'k': 5, 'learning_rate': 0.001, 'max_iter': 50}
     # cornac.models.NeuMF(seed=seed),
@@ -158,6 +164,16 @@ models = [
     # cornac.models.SVD(seed=seed),
     # cornac.models.WMF(seed=seed),
 ]
+
+# OnlineIBPR and BiVAECF depend on PyTorch, which is not a required dependency
+# of this project (see requirements.txt); they are only added to the list if it
+# is available. Neither of them appears in the paper's result tables
+# (MostPop/BPR/EASE^R are the reported CF baselines).
+if HAS_TORCH:
+    models.append(cornac.models.OnlineIBPR())
+    models.append(cornac.models.BiVAECF(batch_size=(64 if dataset == "restaurants" and subset == "paris" else 100)))
+else:
+    print_e("PyTorch not available: OnlineIBPR and BiVAECF are skipped (they are not part of the paper's tables).")
 
 experiment = Experiment(
     eval_method=eval_method,
@@ -184,8 +200,8 @@ for result in experiment.result:
     model_names.append(result.model_name)
     final_res.append([result.metric_avg_results[mtr] for mtr in metric_names])
 
-    # Separar por usuario
-    user_metric = "NDCG@-1"   
+    # Split by user
+    user_metric = "NDCG@-1"
     usr_results = pd.DataFrame(result.metric_user_results).reset_index().rename(columns={"index":"id_user"}).merge(user_id_map, how="left")
     usr_results = usr_results.merge(train_dev_user_count, how="left")
     usr_results = usr_results[["userId", "cold", user_metric]].rename(columns={user_metric: result.model_name})

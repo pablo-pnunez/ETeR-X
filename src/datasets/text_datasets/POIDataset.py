@@ -13,20 +13,20 @@ class POIDataset(TextDataset):
         super().__init__(config, load)
 
     def load_subset(self, subset_name) -> pd.DataFrame:
-        """Carga los datos de una ciudad, quedandose con las columnas relevantes"""
+        """Loads the data for one city, keeping only the relevant columns"""
 
-        # Cargar reviews
+        # Load reviews
         rev = pd.read_pickle(self.CONFIG["data_path"] + "DATA_byList/" + subset_name + "/df.pickle")
-        
-        # Renombramos idPOI a itemId y otros
+
+        # Rename idPOI to itemId and others
         rev = rev.rename(columns={"idPOI": "itemId", "namePOI": "name", "imageId": "images", "dateReview": "date", "reviewTitle": "title", "LinkReview": "url"})
         rev = rev[['reviewId', 'userId', 'itemId', 'rating', 'date', 'text', 'title', 'url', "name"]]
 
-        # Casting a int de algunas columnas
+        # Cast some columns to int
         rev = rev.astype({'reviewId': 'int64', 'itemId': 'int64', 'rating': 'int64'})
         rev["rating"] = rev["rating"]*10
 
-        # Eliminar reviews vacías (que tengan NAN, pero sigue habiendo reviews con texto=="")
+        # Drop empty reviews (NaN text, though some reviews with text=="" remain)
         rev = rev.loc[(~rev["text"].isna()) & (~rev["title"].isna())]
 
         return rev

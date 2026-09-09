@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Baselines de embeddings zero-shot: EmbeddingGemma y Qwen3-Embedding.
+Zero-shot embedding baselines: EmbeddingGemma and Qwen3-Embedding.
 
-Metodologia (descrita en Main.tex, Section~\ref{sec:baselines}): cada item se
-representa por un perfil = media de los embeddings de una muestra de sus
-reviews de entrenamiento (zero-shot, sin fine-tuning). Una query (review de
-test) se embebe con el mismo modelo y se rankea por similitud coseno contra
-cada perfil de item. Es un enfoque QUERY-based (no se construye un perfil de
-usuario), consistente con el resto del paper.
+Methodology (described in Main.tex, Section~\ref{sec:baselines}): each item is
+represented by a profile = mean of the embeddings of a sample of its
+training reviews (zero-shot, no fine-tuning). A query (test
+review) is embedded with the same model and ranked by cosine similarity against
+each item profile. This is a QUERY-based approach (no user profile is built),
+consistent with the rest of the paper.
 
-Reporta tanto la metrica per-review como la agregacion por-usuario (media de
-las predicciones de un usuario, union de sus items relevantes), para que las
-columnas de embeddings sean homogeneas con el resto de tab:results_tk1.
+Reports both the per-review metric and the per-user aggregation (mean of
+a user's predictions, union of their relevant items), so that the
+embedding columns are homogeneous with the rest of tab:results_tk1.
 
-Usa Ollama como servidor de inferencia, restringido a una GPU concreta
-(OLLAMA_HOST/gpu_ids mas abajo) para poder ejecutarse en paralelo con el
-entrenamiento de otros modelos en una GPU distinta.
+Uses Ollama as the inference server, restricted to a specific GPU
+(OLLAMA_HOST/gpu_ids below) so it can run in parallel with
+training other models on a different GPU.
 
-Uso: python embedding_baseline.py [modelo] [dataset:subset ...]
-     modelo: embgemma | qwen3emb | all (default)
+Usage: python embedding_baseline.py [model] [dataset:subset ...]
+     model: embgemma | qwen3emb | all (default)
 """
 import concurrent.futures
 import json
@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 import requests
 from codecarbon import EmissionsTracker
-from scipy.sparse import csr_matrix  # noqa: F401 (no se usa, mantenido por paridad con knn_bow_baseline)
+from scipy.sparse import csr_matrix  # noqa: F401 (unused, kept for parity with knn_bow_baseline)
 from sklearn.metrics import ndcg_score
 
 from src.datasets.text_datasets.AmazonDataset import AmazonDataset
@@ -49,12 +49,12 @@ COMBOS = [
 
 K = 10
 SEED = 100
-MAX_REVIEWS_PER_ITEM = 50  # igual que ZeroShotRS/ETeR-X original (ver su comentario en dataset_loader.py)
+MAX_REVIEWS_PER_ITEM = 50  # same as the original ZeroShotRS/ETeR-X (see its comment in dataset_loader.py)
 
-# Puerto del servidor Ollama a usar; cambiar si Ollama esta escuchando en otra
-# instancia/GPU (util para no competir por GPU con un entrenamiento en curso).
+# Port of the Ollama server to use; change it if Ollama is listening on a different
+# instance/GPU (useful to avoid competing for GPU with an ongoing training run).
 OLLAMA_HOST = "http://127.0.0.1:11435"
-OLLAMA_GPU_ID = 0  # debe coincidir con la GPU real que usa la instancia de arriba
+OLLAMA_GPU_ID = 0  # must match the actual GPU used by the instance above
 MODELS = {"embgemma": "embeddinggemma", "qwen3emb": "qwen3-embedding:0.6b"}
 BATCH_SIZE = 32
 N_WORKERS = 4
@@ -92,7 +92,7 @@ def encode_texts(ollama_name, texts):
 
 
 def get_review_text_by_id(all_data, review_ids):
-    """Replica el fix del bug de reviewId duplicados: dedup ANTES de indexar."""
+    """Replicates the duplicate-reviewId bug fix: dedup BEFORE indexing."""
     all_data = all_data[["reviewId", "text"]].drop_duplicates(subset="reviewId", keep="first")
     return all_data.set_index("reviewId").loc[review_ids]["text"].fillna("").tolist()
 
@@ -100,15 +100,15 @@ def get_review_text_by_id(all_data, review_ids):
 def evaluate_dataset(model_key, dataset, subset, coldstart=False):
     ollama_name = MODELS[model_key]
 
-    # El MD5 del checkpoint de referencia se lee de models/best_models.csv en
-    # vez de localizarlo con un glob sobre el directorio de checkpoints: mas
-    # de un checkpoint puede compartir la misma configuracion de vocabulario
-    # (pos_tagging_fix=true) cuando existen ademas checkpoints de ablaciones
-    # (bow_pct_words, min_reviews_rst) para el mismo dataset/subset, asi que
-    # un glob ya no identifica un unico candidato de forma fiable.
+    # The reference checkpoint's MD5 is read from models/best_models.csv instead
+    # of locating it with a glob over the checkpoint directory: more than one
+    # checkpoint can share the same vocabulary configuration
+    # (pos_tagging_fix=true) when there are also ablation checkpoints
+    # (bow_pct_words, min_reviews_rst) for the same dataset/subset, so
+    # a glob no longer reliably identifies a single candidate.
     best = pd.read_csv("models/best_models.csv")
     row = best[(best.dataset == dataset) & (best.subset == subset) & (best.model == "BOW2ITM")]
-    assert len(row) == 1, f"{dataset}/{subset}: se esperaba 1 fila en best_models.csv, se encontraron {len(row)}"
+    assert len(row) == 1, f"{dataset}/{subset}: expected 1 row in best_models.csv, found {len(row)}"
     md5 = row.iloc[0]["model_md5"]
     with open(f"models/BOW2ITM/{dataset}/{subset}/{md5}/cfg.json") as f:
         cfg = json.load(f)
@@ -119,14 +119,14 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
     n_items = ds.DATA["N_ITEMS"]
 
     if coldstart:
-        # Filtro identico al de run_one_coldstart_eval.py / Main.py known_users=False
+        # Identical filter to run_one_coldstart_eval.py / Main.py's known_users=False
         train_dev_users = train_dev.userId.unique()
         test = test[~test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
 
     all_data = pd.read_pickle(ds.DATASET_PATH + "ALL_DATA")
 
-    # --- Muestra acotada por item para los perfiles (paridad con el enfoque original) ---
+    # --- Bounded per-item sample for the profiles (parity with the original approach) ---
     rng = np.random.RandomState(SEED)
     sampled_idx = (
         train_dev.groupby("id_item", group_keys=False)
@@ -135,10 +135,10 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
     )
     train_sample = train_dev.loc[sampled_idx]
 
-    # El computo real ocurre en el proceso servidor de Ollama, no en este
-    # script, asi que hay que medir a nivel de "machine"/GPU y no de "process"
-    # (que solo veria el consumo de este script, practicamente nulo). El id
-    # de GPU debe coincidir con la que usa la instancia de Ollama de OLLAMA_HOST.
+    # The actual computation happens in the Ollama server process, not in this
+    # script, so emissions must be measured at the "machine"/GPU level, not at the
+    # "process" level (which would see almost nothing, since this script barely does
+    # any compute). The GPU id must match the one used by the Ollama instance at OLLAMA_HOST.
     tracker = EmissionsTracker(project_name=f"{model_key}_{dataset}_{subset}", log_level="error",
                                 tracking_mode="machine", gpu_ids=[OLLAMA_GPU_ID], measure_power_secs=5,
                                 save_to_file=False)
@@ -161,7 +161,7 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
     norms[norms == 0] = 1
     item_profiles = item_profiles / norms
 
-    # --- Queries: el texto de cada review de test, zero-shot ---
+    # --- Queries: each test review's text, zero-shot ---
     query_texts = get_review_text_by_id(all_data, test["reviewId"].values)
     query_embs = encode_texts(ollama_name, query_texts)
     encode_time_s = time.time() - t0
@@ -179,7 +179,7 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
     ndcgs, hits = [], []
     for start in range(0, len(query_embs), batch_size):
         q_batch = query_embs[start:start + batch_size]
-        scores = q_batch @ item_profiles.T  # (batch, n_items), coseno (ambos L2-normalizados)
+        scores = q_batch @ item_profiles.T  # (batch, n_items), cosine (both L2-normalized)
         true_batch = true_items[start:start + batch_size]
         urow_batch = user_row[start:start + batch_size]
 
@@ -236,7 +236,7 @@ if __name__ == "__main__":
     for model_key in model_keys:
         for dataset, subset in targets:
             if any(r["model"] == model_key and r["dataset"] == dataset and r["subset"] == subset for r in rows):
-                print(f"=== {model_key} {dataset}/{subset}: ya hecho, salto ===", flush=True)
+                print(f"=== {model_key} {dataset}/{subset}: already done, skipping ===", flush=True)
                 continue
             print(f"=== {model_key} {dataset}/{subset} ({'coldstart' if coldstart else 'known users'}) ===", flush=True)
             res = evaluate_dataset(model_key, dataset, subset, coldstart=coldstart)
@@ -244,6 +244,6 @@ if __name__ == "__main__":
                   f"NDCG@10={res['ndcg10']:.4f} Recall@10={res['recall10']:.4f} | "
                   f"NDCG@10_user={res['ndcg10_user']:.4f} Recall@10_user={res['recall10_user']:.4f}", flush=True)
             rows.append(res)
-            pd.DataFrame(rows).to_csv(out_path, index=False)  # guardar incremental
+            pd.DataFrame(rows).to_csv(out_path, index=False)  # save incrementally
 
-    print(f"Guardado en {out_path}")
+    print(f"Saved to {out_path}")

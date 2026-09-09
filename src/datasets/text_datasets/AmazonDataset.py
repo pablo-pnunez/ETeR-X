@@ -18,7 +18,7 @@ class AmazonDataset(TextDataset):
     def __dowload_item_name__(self, item):
         baseUrl = "http://www.amazon.com/dp/"
 
-        headersList = { 
+        headersList = {
             'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
             'accept-encoding': 'gzip, deflate, br',
             'accept-language': 'es,en;q=0.9,ca;q=0.8',
@@ -63,23 +63,23 @@ class AmazonDataset(TextDataset):
         return pd.DataFrame.from_dict(df, orient='index')
 
     def load_subset(self, subset_name) -> pd.DataFrame:
-        """Carga los datos de una ciudad, quedandose con las columnas relevantes"""
+        """Loads the data for one city, keeping only the relevant columns"""
 
-        # Cargar reviews, renombrar columnas y ordenar por fecha para crear "reviewId"
+        # Load reviews, rename columns and sort by date to create "reviewId"
         rev = self.__get_pandas_from_gzip__(f'{self.CONFIG["data_path"]}{subset_name}/data.json.gz')
         columns_name_dict = {"reviewerID": "userId", "overall": "rating", "asin": "itemId", "reviewText": "text", "summary": "title", "unixReviewTime": "date"}
         rev = rev.rename(columns=columns_name_dict).sort_values("date").reset_index(drop=True)
         rev.insert(0, "reviewId", range(len(rev)))
 
-        # Cargar metadata
+        # Load metadata
         meta = self.__get_pandas_from_gzip__(f'{self.CONFIG["data_path"]}{subset_name}/metadata.json.gz')
         columns_name_dict = {"asin": "itemId", "title": "name"}
         meta = meta.rename(columns=columns_name_dict).sort_values("date").reset_index(drop=True)
         meta = meta.astype({'name': 'str'})
-        # meta = meta[~meta["name"].str.contains('getTime')]  # Eliminar algunos que tienen HTML en el título por error
+        # meta = meta[~meta["name"].str.contains('getTime')]  # Drop a few whose title has HTML in it by mistake
 
         '''
-        # Descargar los nombres erroneos
+        # Download the erroneous names
         meta["name_len"] = meta["name"].apply(len)
         meta["name_html"] = meta["name"].str.contains("<")
         dowload_items = meta[(meta.name_len<5) | (meta.name_html)]
@@ -88,15 +88,15 @@ class AmazonDataset(TextDataset):
         dowload_results = list(tqdm(executor.map(self.__dowload_item_name__, dowload_items), total=len(dowload_items)))
         '''
 
-        # Quedarse con columnas relevantes y casting de algunas
+        # Keep only the relevant columns and cast some of them
         rev = rev[['reviewId', 'userId', 'itemId', 'rating', 'date', 'text', 'title']]
         rev["rating"] = rev.rating * 10
         rev = rev.astype({'reviewId': 'int64', 'rating': 'int64'})
 
-        # Concatenar items y reviews
+        # Merge items and reviews
         rev = rev.merge(meta[["itemId", "name"]], left_on="itemId", right_on="itemId", how="left")
 
-        # Eliminar reviews vacías (que tengan NAN, pero sigue habiendo reviews con texto=="")
+        # Drop empty reviews (NaN text, though some reviews with text=="" remain)
         rev = rev.loc[(~rev["text"].isna()) & (~rev["title"].isna())]
 
         return rev

@@ -47,7 +47,7 @@ def print_b(text, bold=False):
 
 
 def parse_cmd_args():
-    """Obtener argumentos por linea de comandos"""
+    """Parse command-line arguments"""
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-dst', type=str, help="Dataset")

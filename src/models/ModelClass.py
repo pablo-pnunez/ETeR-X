@@ -18,7 +18,7 @@ class ModelClass:
         self.MODEL_NAME = self.__class__.__name__
         # self.CUSTOM_PATH = self.MODEL_NAME+"/"+self.CONFIG["id"]+"/"
 
-        # El MD5 sin el gpu para que no cambie
+        # MD5 without the gpu field so that it doesn't change
         self.MD5, cfg_save_data = self.__get_md5__()
 
         self.CUSTOM_PATH = self.MODEL_NAME+"/"+self.DATASET.CONFIG["dataset"]+"/"+self.DATASET.CONFIG["subset"]+"/"+self.MD5+"/"
@@ -26,28 +26,29 @@ class ModelClass:
         self.MODEL_PATH = "models/"+self.CUSTOM_PATH
         self.LOG_PATH = "logs/"+self.CUSTOM_PATH
 
-        # Crear carpeta para el modelo
+        # Create the model's folder
         if os.path.exists(self.MODEL_PATH):
             print_w("Model folder already exists...")
-        else: 
+        else:
             os.makedirs(self.MODEL_PATH, exist_ok=True)
 
-        # Crear json con la configuración del modelo
+        # Write the model configuration to a json file
         # with open(self.MODEL_PATH+'/cfg.json', 'w') as fp: json.dump(self.CONFIG["model"], fp)
-        with open(self.MODEL_PATH+'/cfg.json', 'w') as fp: 
+        with open(self.MODEL_PATH+'/cfg.json', 'w') as fp:
             json.dump(cfg_save_data, fp, indent=4)
 
-        # Seleccionar la GPU más adecuada y limitar el uso de memoria
+        # Select the most suitable GPU and cap its memory usage
         self.__config_session__(mixed_precision=self.CONFIG["session"]["mixed_precision"])
 
-        # Fijar las semillas
+        # Fix the random seeds
         self.__fix_seeds__()
 
-        # Crear el modelo
+        # Build the model
         self.MODEL = self.get_model()
 
     def __get_md5__(self):
-        # Obtiene las partes del dicionario de configuración que pueden alterar un modelo (i.e la gpu no, pero el porcentaje de usuarios si). Retorna el MD5
+        # Gets the parts of the configuration dict that can alter a model (e.g. the gpu doesn't,
+        # but the user percentage does). Returns the MD5.
         res = {"dataset_config": self.DATASET.CONFIG}
         for k in self.CONFIG.keys():
             if ("in_md5" not in self.CONFIG[k].keys()) or ("in_md5" in self.CONFIG[k].keys() and self.CONFIG[k]["in_md5"]):
@@ -55,11 +56,11 @@ class ModelClass:
         return hashlib.md5(str(res).encode()).hexdigest(), res
 
     def __config_session__(self, mixed_precision):
-        # Selecciona una de las gpu dispobiles
+        # Selects one of the available GPUs
         os.environ["CUDA_VISIBLE_DEVICES"] = str(self.CONFIG["session"]["gpu"])
 
     def __fix_seeds__(self):
-        # Fijar las semillas de numpy y TF
+        # Fix the numpy and TF random seeds
         np.random.seed(self.CONFIG["model"]["seed"])
         random.seed(self.CONFIG["model"]["seed"])
 

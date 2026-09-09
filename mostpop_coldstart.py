@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Numeros reales de MostPop bajo el protocolo cold-start (usuarios desconocidos
-en TEST), para completar la paridad de los 7 baselines user-identity-agnostic
-mencionados en Appendix B / Section~\ref{sec:results_b} de Main.tex.
+Real MostPop numbers under the cold-start protocol (unknown users in TEST),
+to complete the parity of the 7 user-identity-agnostic baselines mentioned in
+Appendix B / Section~\ref{sec:results_b} of Main.tex.
 
-MOSTPOP2ITM no tiene pesos que cargar (su "modelo" es un vector de popularidad
-fijo, calculado directamente de TRAIN_DEV en get_model(), ver
-src/models/text_models/MOSTPOP2ITM.py): basta construirlo sobre el dataset ya
-cargado, sin necesidad de train()/checkpoint, igual que hace
-run_one_coldstart_eval.py para BOW2ITM/USEM2ITM/BERT2ITM (pero ese script no
-soporta MOSTPOP2ITM). Reporta, para cada dataset, tanto NDCG@10/Recall@10 sobre
-el TEST completo ("known", sin filtrar -- misma definicion que usan
-knn_bow_baseline.py/embedding_baseline.py sin --coldstart) como sobre el TEST
-filtrado a usuarios ausentes en TRAIN_DEV ("coldstart", filtro identico a
-Main.py known_users=False / run_one_coldstart_eval.py).
+MOSTPOP2ITM has no weights to load (its "model" is a fixed popularity vector,
+computed directly from TRAIN_DEV in get_model(), see
+src/models/text_models/MOSTPOP2ITM.py): it is enough to build it on top of
+the already-loaded dataset, no train()/checkpoint needed, the same way
+run_one_coldstart_eval.py does for BOW2ITM/USEM2ITM/BERT2ITM (but that script
+does not support MOSTPOP2ITM). Reports, for each dataset, both NDCG@10/Recall@10
+on the full TEST set ("known", unfiltered -- same definition used by
+knn_bow_baseline.py/embedding_baseline.py without --coldstart) and on the
+TEST set filtered to users absent from TRAIN_DEV ("coldstart", identical
+filter to Main.py's known_users=False / run_one_coldstart_eval.py).
 
-Uso: python mostpop_coldstart.py [gpu]
-Salida: results/mostpop_coldstart_results.csv
+Usage: python mostpop_coldstart.py [gpu]
+Output: results/mostpop_coldstart_results.csv
 """
 import json
 import os
@@ -46,7 +46,7 @@ best = pd.read_csv("models/best_models.csv")
 rows = []
 for dataset, subset in COMBOS:
     row = best[(best.dataset == dataset) & (best.subset == subset) & (best.model == "MOSTPOP2ITM")]
-    assert len(row) == 1, f"{dataset}/{subset}: se esperaba 1 fila en best_models.csv, se encontraron {len(row)}"
+    assert len(row) == 1, f"{dataset}/{subset}: expected 1 row in best_models.csv, found {len(row)}"
     md5 = row.iloc[0]["model_md5"]
     with open(f"models/MOSTPOP2ITM/{dataset}/{subset}/{md5}/cfg.json") as f:
         cfg = json.load(f)
@@ -56,13 +56,13 @@ for dataset, subset in COMBOS:
 
     mdl_cfg = {"model": cfg["model"], "session": {"gpu": int(gpu), "mixed_precision": False, "in_md5": False}}
     model = MOSTPOP2ITM(mdl_cfg, text_dataset)
-    assert model.MD5 == md5, f"MD5 no coincide para {dataset}/{subset}: {model.MD5} != {md5}"
+    assert model.MD5 == md5, f"MD5 mismatch for {dataset}/{subset}: {model.MD5} != {md5}"
     model.train(dev=False, save_model=True)
 
-    # --- "known": TEST completo, sin filtrar (misma definicion que knn_bow_baseline.py/embedding_baseline.py sin --coldstart) ---
+    # --- "known": full TEST set, unfiltered (same definition as knn_bow_baseline.py/embedding_baseline.py without --coldstart) ---
     ret_known = model.evaluate(test=True, user_info=False, verbose=False)
 
-    # --- "coldstart": filtro identico a Main.py known_users=False / run_one_coldstart_eval.py ---
+    # --- "coldstart": identical filter to Main.py's known_users=False / run_one_coldstart_eval.py ---
     train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep="last")
@@ -82,6 +82,6 @@ for dataset, subset in COMBOS:
 
 df = pd.DataFrame(rows)
 df.to_csv("results/mostpop_coldstart_results.csv", index=False)
-print("\n=== Promedios (12 datasets) ===")
+print("\n=== Averages (12 datasets) ===")
 print(df[["ndcg10_known", "recall10_known", "ndcg10_cold", "recall10_cold"]].mean())
-print("Guardado en results/mostpop_coldstart_results.csv")
+print("Saved to results/mostpop_coldstart_results.csv")

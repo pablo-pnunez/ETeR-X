@@ -4,11 +4,11 @@ import numpy as np
 
 
 class BaseSequenceXY(Sequence):
-    """ Esqueleto de una secuencia."""
+    """ Skeleton of a sequence."""
 
     def __init__(self, parent_model):
 
-        self.MODEL = parent_model  # Modelo de keras que contiene todos los datos de configuración
+        self.MODEL = parent_model  # Keras model holding the full configuration data
         self.BATCH_SIZE = self.MODEL.CONFIG["model"]["batch_size"]
         self.MODEL_DATA = self.init_data()
 
@@ -38,11 +38,11 @@ class BaseSequenceXY(Sequence):
 
 
 class BaseSequence(Sequence):
-    """ Esqueleto de una secuencia."""
+    """ Skeleton of a sequence."""
 
     def __init__(self, parent_model):
 
-        self.MODEL = parent_model  # Modelo de keras que contiene todos los datos de configuración
+        self.MODEL = parent_model  # Keras model holding the full configuration data
         self.BATCH_SIZE = self.MODEL.CONFIG["model"]["batch_size"]
         self.MODEL_DATA = self.init_data()
 

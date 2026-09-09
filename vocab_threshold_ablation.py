@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Ablacion del umbral de vocabulario `bow_pct_words`: el paper fija este
-hiperparametro al 10% para todos los datasets sin mostrar sensibilidad a esta
-eleccion, asi que se repite el entrenamiento en varios datasets
-representativos, variando bow_pct_words en {5, 10, 20, 50} y manteniendo fijo
-el resto de hiperparametros (los ya elegidos por grid-search para cada
-dataset, Tabla 8), para aislar el efecto del tamano de vocabulario.
+"""Ablation of the vocabulary threshold `bow_pct_words`: the paper fixes this
+hyperparameter at 10% for every dataset without showing sensitivity to this
+choice, so training is repeated on several representative datasets, varying
+bow_pct_words over {5, 10, 20, 50} while keeping every other hyperparameter
+fixed (already chosen by grid search for each dataset, Table 8), to isolate
+the effect of vocabulary size.
 
-pct=10 no se reentrena: ya existe como el checkpoint actual de BOW2ITM para
-cada dataset; sus metricas se leen directamente de ese checkpoint.
+pct=10 is not retrained: it already exists as the current BOW2ITM checkpoint
+for each dataset; its metrics are read directly from that checkpoint.
 
-Cada pct se entrena en un proceso separado (uso: `python vocab_threshold_ablation.py <dataset> <subset> <pct> dev|final|eval`)
-para evitar reutilizar estado de Keras/TensorFlow entre entrenamientos
-consecutivos dentro del mismo proceso.
+Each pct is trained in a separate process (usage: `python vocab_threshold_ablation.py <dataset> <subset> <pct> dev|final|eval`)
+to avoid reusing Keras/TensorFlow state across consecutive training runs
+within the same process.
 
-Uso: python vocab_threshold_ablation.py <dataset> <subset> <pct> <dev|final|eval> [gpu]
+Usage: python vocab_threshold_ablation.py <dataset> <subset> <pct> <dev|final|eval> [gpu]
   dataset/subset: restaurants/gijon, pois/london, amazon/fashion, ...
 """
 import json
@@ -37,9 +37,9 @@ from src.models.text_models.BOW2ITM import BOW2ITM
 
 DATASET_CLASSES = {"restaurants": RestaurantDataset, "pois": POIDataset, "amazon": AmazonDataset}
 
-# Rutas/idioma/lr/batch: los mismos que el checkpoint actual (pct=10) de cada
-# dataset, para aislar el efecto de bow_pct_words sin reabrir la busqueda de
-# hiperparametros. Tomados directamente de sus cfg.json (Tabla 8).
+# Paths/language/lr/batch: the same as the current checkpoint (pct=10) for
+# each dataset, to isolate the effect of bow_pct_words without reopening the
+# hyperparameter search. Taken directly from their cfg.json (Table 8).
 DATASET_DEFAULTS = {
     ("restaurants", "gijon"): {
         "data_path": "/media/nas/datasets/tripadvisor/restaurants/", "language": "es",
@@ -94,9 +94,9 @@ MDL_CFG = {
 }
 
 dataset = DATASET_CLASSES[dataset_name](DTS_CFG)
-# NOTA: dataset.DATA["VOCAB_SIZE"] es el vocabulario del tokenizer de SECUENCIAS
-# (controlado por n_max_words=-50, fijo, NADA que ver con bow_pct_words). El
-# vocabulario BoW real -- el que bow_pct_words controla -- es FEATURES_NAME.
+# NOTE: dataset.DATA["VOCAB_SIZE"] is the vocabulary of the SEQUENCE tokenizer
+# (controlled by n_max_words=-50, fixed, unrelated to bow_pct_words). The
+# actual BoW vocabulary -- the one bow_pct_words controls -- is FEATURES_NAME.
 bow_vocab_size = len(dataset.DATA["FEATURES_NAME"])
 print(f"{dataset_name}/{subset_name} pct={pct}% -> BOW vocab size = {bow_vocab_size}", flush=True)
 
@@ -111,9 +111,9 @@ elif mode == "final":
     model.train(dev=False, save_model=True)
 
 elif mode == "eval":
-    # Un proceso nuevo parte de pesos sin entrenar: hay que cargar los pesos finales
-    # explicitamente antes de evaluar (train(dev=False, save_model=True) hace
-    # load_weights() y retorna de inmediato si el checkpoint final ya existe).
+    # A new process starts from untrained weights: the final weights must be
+    # loaded explicitly before evaluating (train(dev=False, save_model=True) calls
+    # load_weights() and returns immediately if the final checkpoint already exists).
     model.train(dev=False, save_model=True)
     ret = model.evaluate(test=True, user_info=True, verbose=True)
     user_agg = pd.read_csv(f"{model.MODEL_PATH}final_user_agg_eval.csv")
@@ -136,7 +136,7 @@ elif mode == "eval":
     rows = pd.read_csv(out_path).to_dict("records") if os.path.exists(out_path) else []
     rows = [r for r in rows if not (r["dataset"] == dataset_name and r["subset"] == subset_name and r["pct"] == pct)] + [row]
     pd.DataFrame(rows).sort_values(["dataset", "subset", "pct"]).to_csv(out_path, index=False)
-    print(f"Guardado en {out_path}", flush=True)
+    print(f"Saved to {out_path}", flush=True)
 
 else:
-    raise ValueError(f"modo desconocido: {mode}")
+    raise ValueError(f"unknown mode: {mode}")

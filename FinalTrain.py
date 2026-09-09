@@ -18,18 +18,18 @@ os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu)
 
 from src.experiments.Common import load_best_model
 
-# Cargar mejor modelo
+# Load the best model
 model_class = load_best_model(model=args.model, dataset=args.dataset, subset=args.subset, gpu=gpu)
 
-# Analizar las emisiones
+# Track emissions
 base_tracker_params = {"gpu_ids":[gpu], "output_dir":model_class.MODEL_PATH, "tracking_mode":"process", "output_file":"emissions.csv"}
 train_tracker_params = {**base_tracker_params, "project_name":"train"}
 test_tracker_params = {**base_tracker_params, "project_name":"test"}
 
 with EmissionsTracker(**train_tracker_params) as tracker:
-    # Entrenar el modelo final
+    # Train the final model
     model_class.train(dev=False, save_model=True)
-    
+
 with EmissionsTracker(**test_tracker_params) as tracker:
-    # Evaluar el modelo final
+    # Evaluate the final model
     model_class.evaluate(test=True, user_info=True)

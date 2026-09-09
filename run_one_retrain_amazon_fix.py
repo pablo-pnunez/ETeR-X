@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-Reentrena, DESDE CERO, un modelo USEM2ITM/BERT2ITM en un dataset de Amazon,
-tras el fix del bug de reviewId duplicados en __create_tfdata__ (ver
-src/models/text_models/USEM2ITM.py y BERT2ITM.py).
+Retrains a USEM2ITM/BERT2ITM model on an Amazon dataset FROM SCRATCH, after
+fixing the duplicate-reviewId bug in __create_tfdata__ (see
+src/models/text_models/USEM2ITM.py and BERT2ITM.py).
 
-A diferencia de run_one_user_agg.py, aqui SI se espera que se reentrene: los
-checkpoints "finales" (no los de dev/, que se conservan intactos para no
-repetir el grid-search) se movieron previamente a _pre_reviewid_fix_backup/,
-asi que KerasModelClass.__train_model__ no encuentra un checkpoint existente
-y entrena de verdad, usando el mismo numero de epochs (derivado del
-early-stopping ya registrado en dev/log.csv) e hiperparametros que la
-ejecucion original (buggy).
+Unlike run_one_user_agg.py, this one IS meant to retrain: the "final"
+checkpoints (not the dev/ ones, which are kept intact to avoid repeating the
+grid search) were moved beforehand to _pre_reviewid_fix_backup/, so
+KerasModelClass.__train_model__ finds no existing checkpoint and genuinely
+retrains, using the same number of epochs (derived from the early stopping
+already recorded in dev/log.csv) and hyperparameters as the original (buggy)
+run.
 
-Uso:
+Usage:
     python run_one_retrain_amazon_fix.py --model USEM2ITM --dataset amazon --subset fashion --md5 b73849c1...
 """
 import argparse
@@ -49,23 +49,23 @@ text_dataset = AmazonDataset(dts_cfg)
 model = MODEL_CLASSES[args.model](mdl_cfg, text_dataset)
 
 if model.MD5 != args.md5:
-    print(f"FATAL: MD5 no coincide para {args.model}/{args.dataset}/{args.subset}: se obtuvo {model.MD5}, se esperaba {args.md5}")
+    print(f"FATAL: MD5 mismatch for {args.model}/{args.dataset}/{args.subset}: got {model.MD5}, expected {args.md5}")
     sys.exit(1)
 
 checkpoint_path = model.MODEL_PATH + "checkpoint"
 if os.path.exists(checkpoint_path):
-    print(f"FATAL: ya existe un checkpoint final en {model.MODEL_PATH}; se esperaba que estuviera movido a _pre_reviewid_fix_backup/ para forzar el reentrenamiento")
+    print(f"FATAL: a final checkpoint already exists at {model.MODEL_PATH}; it was expected to have been moved to _pre_reviewid_fix_backup/ to force retraining")
     sys.exit(1)
 
 dev_log_path = model.MODEL_PATH + "dev/log.csv"
 if not os.path.exists(dev_log_path):
-    print(f"FATAL: no existe {dev_log_path}, no se puede determinar el numero de epochs del entrenamiento final")
+    print(f"FATAL: {dev_log_path} does not exist, cannot determine the number of epochs for the final training run")
     sys.exit(1)
 
-print(f"Reentrenando {args.model}/{args.dataset}/{args.subset} (md5={args.md5})...")
+print(f"Retraining {args.model}/{args.dataset}/{args.subset} (md5={args.md5})...")
 model.train(dev=False, save_model=True)
 
-print("Evaluando (per-review existente + per-usuario nuevo)...")
+print("Evaluating (existing per-review + new per-user metrics)...")
 model.evaluate(test=True, user_info=True)
 
 print(f"DONE {args.model}/{args.dataset}/{args.subset}/{args.md5}")

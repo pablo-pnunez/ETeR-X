@@ -15,9 +15,6 @@ from src.datasets.text_datasets.RestaurantDataset import RestaurantDataset
 from src.datasets.text_datasets.AmazonDataset import AmazonDataset
 from src.datasets.text_datasets.POIDataset import POIDataset
 
-from src.models.text_models.att.ATT2ITM import ATT2ITM
-from src.models.text_models.att.ATT2ITM_2 import ATT2ITM_2 # como el normal, pero sin tanh.
-
 from src.models.text_models.BOW2ITM import BOW2ITM
 from src.models.text_models.USEM2ITM import USEM2ITM
 from src.models.text_models.BERT2ITM import BERT2ITM
@@ -45,7 +42,7 @@ subset = "gijon".lower().replace(" ", "") if args.sst is None else args.sst
 stage = -1 if args.stg is None else args.stg
 use_best = False
 
-if use_best:  # Usar la mejor configuración conocida?
+if use_best:  # Use the best known configuration?
     best_model = pd.read_csv("models/best_models.csv")
     best_model = best_model.loc[(best_model.dataset == dataset) & (best_model.subset == subset) & (best_model.model == model)]["model_md5"].values[0]
     # best_model = "1badd2185814e515e43609bc6b2c13ae"
@@ -74,7 +71,7 @@ else:
     bow_pct_words = 10 if args.bownws is None else args.bownws
     w2v_dimen = 512  # 300
 
-    remove_stopwords = 2  # 0, 1 o 2 (No quitar, quitar manual, quitar automático)
+    remove_stopwords = 2  # 0, 1 or 2 (don't remove, remove manually, remove automatically)
     lemmatization = True
     remove_accents = True
     remove_numbers = True
@@ -86,7 +83,7 @@ else:
         base_path = "/media/nas/datasets/tripadvisor/restaurants/"
     elif dataset == "pois":
         base_path = "/media/nas/datasets/tripadvisor/pois/"
-        language = "es"  # Están todas en español
+        language = "es"  # They are all in Spanish
     elif dataset == "amazon":
         base_path = "/media/nas/datasets/amazon/"
 
@@ -98,9 +95,9 @@ else:
                "min_reviews_rst": min_reviews_rst, "min_reviews_usr": min_reviews_usr,
                "min_df": 5, "bow_pct_words": bow_pct_words, "presencia": False, "text_column": "text",  # BOW
                "n_max_words": -50, "test_dev_split": .1, "truncate_padding": truncate_padding,
-               # Marca de versión del preprocesado: fuerza una caché nueva (no pisa la de los experimentos
-               # originales) y documenta en cfg.json que este dataset usa el PoS tagging corregido
-               # (etiquetado sobre texto con mayúsculas/puntuación intactas, para no filtrar mal los PROPN).
+               # Preprocessing version marker: forces a new cache (doesn't overwrite the original
+               # experiments' cache) and documents in cfg.json that this dataset uses the corrected
+               # PoS tagging (tagging done on text with casing/punctuation intact, to avoid mis-filtering PROPN).
                "pos_tagging_fix": True}
 
 if dataset == "restaurants":
@@ -116,15 +113,15 @@ else:
 known_users = True
 
 if known_users is False:
-    print_e("Se dejan solo usuarios desconocidos!!")
-    # Se buscan los usuarios de train+dev y se eliminan de test
+    print_e("Only unknown users are kept!!")
+    # Find the train+dev users and remove them from test
     train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep='last', inplace=False)
 
 if "MOSTPOP2ITM" == model:
     mostpop2itm_mdl = MOSTPOP2ITM({"model":{"batch_size": b_size, "learning_rate": l_rate, "seed":seed}, "session": {"gpu": gpu, "mixed_precision": True, "in_md5": False}}, text_dataset)   
-    mostpop2itm_mdl.train() # Crea un csv falso
+    mostpop2itm_mdl.train() # Creates a fake csv
     # mostpop2itm_mdl.evaluate()
 
 elif "BOW2ITM" == model:

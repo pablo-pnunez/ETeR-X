@@ -10,27 +10,27 @@ class RestaurantDataset(TextDataset):
         super().__init__(config, load)
 
     def load_subset(self, subset_name) -> pd.DataFrame:
-        """Carga los datos de una ciudad, quedandose con las columnas relevantes"""
+        """Loads the data for one city, keeping only the relevant columns"""
 
-        # Cargar restaurantes
+        # Load restaurants
         res = pd.read_pickle(self.CONFIG["data_path"] + subset_name + "/restaurants.pkl")
 
-        # Cargar reviews
+        # Load reviews
         rev = pd.read_pickle(self.CONFIG["data_path"] + subset_name + "/reviews.pkl")
         rev = rev[['reviewId', 'userId', 'restaurantId', 'rating', 'date', 'language', 'text', 'title', 'url']]
 
-        # Renombramos restaurantId a itemId
+        # Rename restaurantId to itemId
         rev = rev.rename(columns={"restaurantId": "itemId"})
 
-        # Casting a int de algunas columnas
+        # Cast some columns to int
         res = res.astype({'id': 'int64'})
         rev = rev.astype({'reviewId': 'int64', 'itemId': 'int64', 'rating': 'int64'})
 
-        # Concatenar restaurantes y reviews
+        # Merge restaurants and reviews
         rev = rev.merge(res[["id", "name"]], left_on="itemId", right_on="id", how="left")
         rev = rev.drop(columns=["id"])
 
-        # Eliminar reviews vacías (que tengan NAN, pero sigue habiendo reviews con texto=="")
+        # Drop empty reviews (NaN text, though some reviews with text=="" remain)
         rev = rev.loc[(~rev["text"].isna()) & (~rev["title"].isna())]
 
         return rev
