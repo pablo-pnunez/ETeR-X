@@ -22,3 +22,12 @@ docs/paper/*.fls
 docs/paper/*.log
 docs/paper/*.out
 docs/paper/Main.pdf
+docs/SUSCOM/*.aux
+docs/SUSCOM/*.bbl
+docs/SUSCOM/*.blg
+docs/SUSCOM/*.fdb_latexmk
+docs/SUSCOM/*.fls
+docs/SUSCOM/*.log
+docs/SUSCOM/*.out
+docs/SUSCOM/Main_SUSCOM.pdf
+docs/SUSCOM/*.spl
