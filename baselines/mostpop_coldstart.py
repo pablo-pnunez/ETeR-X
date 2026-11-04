@@ -15,14 +15,21 @@ baselines/knn_bow_baseline.py/embedding_baseline.py without --coldstart) and on 
 TEST set filtered to users absent from TRAIN_DEV ("coldstart", identical
 filter to experiments/Main.py's known_users=False / experiments/run_one_coldstart_eval.py).
 
-Usage: python baselines/mostpop_coldstart.py [gpu]
-Output: results/mostpop_coldstart_results.csv
+Usage: python baselines/mostpop_coldstart.py [gpu] [--only dataset/subset ...] [--out CSV]
+Output: results/mostpop_coldstart_results.csv (default)
 """
 import json
 import os
 import sys
 
-gpu = sys.argv[1] if len(sys.argv) > 1 else "0"
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument("gpu", nargs="?", default="0")
+ap.add_argument("--only", nargs="*", help="restrict to these dataset/subset pairs, e.g. restaurants/gijon")
+ap.add_argument("--out", default="results/mostpop_coldstart_results.csv")
+args = ap.parse_args()
+gpu = args.gpu
 os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
@@ -40,6 +47,10 @@ COMBOS = [
     ("restaurants", "gijon"), ("restaurants", "barcelona"), ("restaurants", "madrid"),
     ("restaurants", "newyorkcity"), ("restaurants", "paris"),
 ]
+
+if args.only:
+    COMBOS = [c for c in COMBOS if "/".join(c) in args.only]
+    assert COMBOS, f"no known dataset/subset in {args.only}"
 
 best = pd.read_csv("models/best_models.csv")
 
@@ -90,7 +101,7 @@ for dataset, subset in COMBOS:
     rows.append(row_out)
 
 df = pd.DataFrame(rows)
-df.to_csv("results/mostpop_coldstart_results.csv", index=False)
-print("\n=== Averages (12 datasets) ===")
+df.to_csv(args.out, index=False)
+print(f"\n=== Averages ({len(df)} datasets) ===")
 print(df[["ndcg10_known", "recall10_known", "ndcg10_cold", "recall10_cold"]].mean())
-print("Saved to results/mostpop_coldstart_results.csv")
+print(f"Saved to {args.out}")
