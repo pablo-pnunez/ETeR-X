@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ETeR-X"
+abstract: "Query-based text recommender that is robust to user cold-start."
+type: software
+license: MIT
+repository-code: "https://github.com/pablo-pnunez/ETeR-X"
+authors:
+  - family-names: "Pérez"
+    given-names: "Pablo"
+    email: "pabloperez@uniovi.es"

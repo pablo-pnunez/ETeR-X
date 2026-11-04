@@ -274,4 +274,5 @@ not needed and can be left out.
 ## Citing
 
 The paper describing this system is currently under review; please contact
-the authors if you would like to cite this work ahead of publication.
+the authors if you would like to cite this work ahead of publication. Software
+citation metadata is in `CITATION.cff`; the code is released under the MIT license (`LICENSE`).
