@@ -12,13 +12,21 @@ import tensorflow as tf
 from nltk.corpus import stopwords
 from spacy.language import Language
 from sklearn.preprocessing import normalize
+from langdetect import DetectorFactory
 from spacy_langdetect import LanguageDetector
 from unicodedata import normalize as normalize_uni
 from sklearn.feature_extraction.text import CountVectorizer
 
 
+LANGDETECT_SEED = 42
+
+
 def get_lang_detector(nlp, name):
-    return LanguageDetector()  # We use the seed 42
+    # langdetect is non-deterministic unless its factory seed is fixed. Without this, borderline
+    # reviews are randomly kept/dropped by the language filter, which changes the number of reviews
+    # and, through the seeded shuffle of the whole dataset, every train/test split.
+    DetectorFactory.seed = LANGDETECT_SEED
+    return LanguageDetector()
 
 
 class TextDataset(DatasetClass):
