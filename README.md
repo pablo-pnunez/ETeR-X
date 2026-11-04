@@ -1,4 +1,4 @@
-# **ETeR-X:** An efficient text-based recommender system with explanatory capabilities for cold-start scenarios
+# **ETeR-X:** An efficient, explainable query-based recommender system robust to user cold-start
 
 <br>
 
@@ -80,7 +80,7 @@ Two baselines have additional, optional requirements:
 - **BiVAE and OnlineIBPR** (Cornac baselines, included in `experiments/Baselines.py` but not
   reported in the paper's main tables) need PyTorch. It is not pinned in
   `requirements.txt` because the right build depends on your CUDA version;
-  install it from the instructions at <https://pytorch.org/get-started/locally/>
+  install it from the instructions at [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)
   before running `experiments/Baselines.py` with these two models enabled. Every model
   actually reported in the paper (MostPop, BPR, EASE^R) runs without it.
 - **EmbeddingGemma and Qwen3-Embedding** (`baselines/embedding_baseline.py`) are served
@@ -90,6 +90,7 @@ Two baselines have additional, optional requirements:
   ollama pull embeddinggemma
   ollama pull qwen3-embedding:0.6b
   ```
+
   `baselines/embedding_baseline.py` talks to Ollama over HTTP (`OLLAMA_HOST` at the top
   of the file); adjust the host/port and `OLLAMA_GPU_ID` if your Ollama
   instance runs on a different port or GPU than the one used for training.
@@ -106,7 +107,7 @@ Datasets are not included in this repository. Each loader in
   `summary`, `unixReviewTime`, ...) and `{data_path}/{subset}/metadata.json.gz`
   (`asin`, `title`, ...). `subset` is `fashion` or `digital_music` in this
   paper. The raw category dumps are publicly available from
-  <https://cseweb.ucsd.edu/~jmcauley/datasets.html#amazon_reviews>; download
+  [https://cseweb.ucsd.edu/~jmcauley/datasets.html#amazon_reviews](https://cseweb.ucsd.edu/~jmcauley/datasets.html#amazon_reviews); download
   the relevant categories and place them under `{subset}/` with these two
   file names.
 - **Restaurants** (`RestaurantDataset`) and **POIs** (`POIDataset`): reviews
@@ -114,11 +115,12 @@ Datasets are not included in this repository. Each loader in
   pickled DataFrames (`{data_path}/{subset}/reviews.pkl` +
   `restaurants.pkl` for restaurants; `{data_path}/DATA_byList/{subset}/df.pickle`
   for POIs). Both are published on Zenodo (CC BY 4.0), one zip per city:
-  - TripAdvisor Restaurant Reviews: <https://zenodo.org/records/14622324>
+
+  - TripAdvisor Restaurant Reviews: [https://zenodo.org/records/14622324](https://zenodo.org/records/14622324)
     (v2.0.0: Istanbul, Madrid, Barcelona, Gijón, Moscow). The paper's Paris and
     New York City restaurant subsets are not in this version; they are in
-    v1.0.0 (<https://doi.org/10.5281/zenodo.5644892>).
-  - TripAdvisor Points of Interest: <https://zenodo.org/records/5749846>
+    v1.0.0 ([https://doi.org/10.5281/zenodo.5644892](https://doi.org/10.5281/zenodo.5644892)).
+  - TripAdvisor Points of Interest: [https://zenodo.org/records/5749846](https://zenodo.org/records/5749846)
     (v1.0.0: Madrid, Barcelona, London, Paris, New York City).
 
   Unzip each city under the layout above (the loaders expect the file names
@@ -152,6 +154,7 @@ guessing from the directory listing.
 python experiments/Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 0   # hyperparameter search (dev split)
 python experiments/Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 3   # final training + evaluation
 ```
+
 `-mn` selects the model (`BOW2ITM` = ETeR-X, `USEM2ITM`, `BERT2ITM`,
 `MOSTPOP2ITM`), `-dst`/`-sst` the dataset/subset. See `experiments/Main.py`'s
 `parse_cmd_args` (in `src/Common.py`) for the full list of flags (learning
@@ -164,9 +167,11 @@ the top to select which ones to run).
 `experiments/FinalTrain.py` re-trains the already-selected best configuration for a
 combination while also measuring training/inference carbon emissions with
 `codecarbon`:
+
 ```bash
 python experiments/FinalTrain.py -dataset restaurants -subset gijon -model BOW2ITM
 ```
+
 `scripts/FinalTrain.sh` does the same for every combination, one model at a
 time (edit its `MODELS` array).
 
@@ -175,6 +180,7 @@ time (edit its `MODELS` array).
 ```bash
 python experiments/Baselines.py -dst restaurants -sst gijon
 ```
+
 Trains and evaluates all Cornac-based baselines for one dataset/subset at
 once via a single `cornac.experiment.Experiment`, and writes
 `models/Baselines/<dataset>/<subset>/{results.csv,user_results.csv}`. Requires
@@ -196,6 +202,7 @@ python baselines/embedding_baseline.py all --coldstart
 
 python baselines/mostpop_coldstart.py                  # both protocols in one run
 ```
+
 Each of these iterates over all twelve datasets on its own and writes its
 own output CSV under `results/` (`knn_bow_results.csv`, `embedding_results.csv`,
 `mostpop_coldstart_results.csv`, plus `*_coldstart.csv` variants); none of
@@ -208,25 +215,28 @@ Table 6 of the paper (`tab:results_tk1`) aggregates every model's predictions
 per user rather than per review, to match Cornac's evaluation semantics for
 the CF baselines. For ETeR-X/USEM/BERT this requires an extra pass over an
 already-trained checkpoint:
+
 ```bash
 python experiments/run_one_user_agg.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash from best_models.csv>
 ```
+
 and, for the user-cold-start comparison (Section 4.3.3 / Appendix B):
+
 ```bash
 python experiments/run_one_coldstart_eval.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash>
 ```
+
 Both scripts run against a single checkpoint per invocation, in a separate
 process, to avoid reusing a TensorFlow/GPU session across models. To run
 every combination, loop over `models/best_models.csv`, e.g.:
-```bash
-python - <<'PY'
+
+```Python
 import pandas as pd, subprocess
 best = pd.read_csv("models/best_models.csv")
 for _, row in best[best.model.isin(["BOW2ITM", "USEM2ITM", "BERT2ITM"])].iterrows():
     subprocess.run(["python", "experiments/run_one_user_agg.py",
                      "--model", row.model, "--dataset", row.dataset,
                      "--subset", row.subset, "--md5", row.model_md5])
-PY
 ```
 
 ### 3.5 Sensitivity ablations
@@ -240,6 +250,7 @@ python experiments/min_reviews_ablation.py restaurants gijon 5 dev
 python experiments/min_reviews_ablation.py restaurants gijon 5 final
 python experiments/min_reviews_ablation.py restaurants gijon 5 eval        # appends to results/min_reviews_ablation_results.csv
 ```
+
 Both scripts sweep one hyperparameter (`bow_pct_words` and `min_reviews_rst`
 respectively) while keeping every other choice fixed at its grid-searched
 value, on the three representative datasets used in the paper (Restaurants
