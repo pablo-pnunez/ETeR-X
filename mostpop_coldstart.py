@@ -62,6 +62,14 @@ for dataset, subset in COMBOS:
     # --- "known": full TEST set, unfiltered (same definition as knn_bow_baseline.py/embedding_baseline.py without --coldstart) ---
     ret_known = model.evaluate(test=True, user_info=False, verbose=False)
 
+    # --- "known_only": TEST restricted to users seen in TRAIN_DEV (same population as the CF baselines) ---
+    original_test = text_dataset.DATA["TEST"]
+    known_train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
+    text_dataset.DATA["TEST"] = original_test[original_test["userId"].isin(known_train_dev_users)].drop_duplicates(subset=["userId", "id_item"], keep="last")
+    n_test_knownonly = len(text_dataset.DATA["TEST"])
+    ret_knownonly = model.evaluate(test=True, user_info=False, verbose=False)
+    text_dataset.DATA["TEST"] = original_test
+
     # --- "coldstart": identical filter to Main.py's known_users=False / run_one_coldstart_eval.py ---
     train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
@@ -71,7 +79,8 @@ for dataset, subset in COMBOS:
 
     row_out = {
         "dataset": dataset, "subset": subset,
-        "n_test_known": n_test_known, "n_test_cold": n_test_cold,
+        "n_test_known": n_test_known, "n_test_cold": n_test_cold, "n_test_knownonly": n_test_knownonly,
+        "ndcg10_knownonly": float(ret_knownonly["NDCG@10"].values[0]), "recall10_knownonly": float(ret_knownonly["Recall@10"].values[0]),
         "ndcg10_known": float(ret_known["NDCG@10"].values[0]),
         "recall10_known": float(ret_known["Recall@10"].values[0]),
         "ndcg10_cold": float(ret_cold["NDCG@10"].values[0]),

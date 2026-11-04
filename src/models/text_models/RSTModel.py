@@ -134,7 +134,7 @@ class RSTModel(KerasModelClass):
             train_dev_gn = self.__create_tfdata__(all_data)
             return train_dev_gn
 
-    def evaluate(self, test=False, user_info=False, verbose=True):
+    def evaluate(self, test=False, user_info=False, verbose=True, out_tag=""):
         if test:
             test_data = self.DATASET.DATA["TEST"]
         else:
@@ -179,12 +179,12 @@ class RSTModel(KerasModelClass):
             sm_all = pd.concat([test_data.reset_index(drop=True), sm_all], axis=1)
             train_dev_user_count = self.DATASET.DATA["TRAIN_DEV"].groupby("userId").agg(cold=("userId","count")).reset_index()
             sm_all = sm_all.merge(train_dev_user_count, how="left").fillna(0)
-            sm_all.to_csv(f"{self.MODEL_PATH}{'final_' if test else ''}user_eval.csv")
+            sm_all.to_csv(f"{self.MODEL_PATH}{'final_' if test else ''}user_eval{out_tag}.csv")
 
             # Per-user aggregated metrics (comparable to the aggregation Cornac uses
             # for the CF baselines) instead of per-review. See __per_user_ranking_eval__.
             user_agg = self.__per_user_ranking_eval__(test_data.reset_index(drop=True), y_pred, y_true, k=10)
-            user_agg.to_csv(f"{self.MODEL_PATH}{'final_' if test else ''}user_agg_eval.csv", index=False)
+            user_agg.to_csv(f"{self.MODEL_PATH}{'final_' if test else ''}user_agg_eval{out_tag}.csv", index=False)
             if verbose:
                 print_g(f"Per-user aggregated (Cornac-style) NDCG@10/Recall@10:\n{user_agg[['NDCG@10_user', 'Recall@10_user']].mean()}")
 

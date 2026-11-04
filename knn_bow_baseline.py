@@ -55,7 +55,7 @@ COMBOS = [
 K = 10
 
 
-def evaluate_dataset(dataset, subset, coldstart=False):
+def evaluate_dataset(dataset, subset, coldstart=False, known=False):
     # The reference checkpoint's MD5 is read from models/best_models.csv instead
     # of locating it with a glob over the checkpoint directory: more than one
     # checkpoint can share the same vocabulary configuration
@@ -78,6 +78,12 @@ def evaluate_dataset(dataset, subset, coldstart=False):
         # Identical filter to run_one_coldstart_eval.py / Main.py's known_users=False
         train_dev_users = train_dev.userId.unique()
         test = test[~test["userId"].isin(train_dev_users)]
+        test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
+    if known:
+        # Known users only: keep TEST reviews whose author appears in TRAIN_DEV, same
+        # population Baselines.py gives the CF baselines (unlike the default, unfiltered run).
+        train_dev_users = train_dev.userId.unique()
+        test = test[test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
     bow_seq = ds.DATA["BOW_SEQUENCES"]  # already L1-normalized per row, positionally aligned via "bow"
     n_items = ds.DATA["N_ITEMS"]
@@ -170,14 +176,15 @@ def evaluate_dataset(dataset, subset, coldstart=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--coldstart", action="store_true")
+    parser.add_argument("--known", action="store_true", help="restrict TEST to users seen in TRAIN_DEV (-> results/knn_bow_results_known.csv)")
     args = parser.parse_args()
 
-    out_path = "results/knn_bow_results_coldstart.csv" if args.coldstart else "results/knn_bow_results.csv"
+    out_path = "results/knn_bow_results_coldstart.csv" if args.coldstart else ("results/knn_bow_results_known.csv" if args.known else "results/knn_bow_results.csv")
 
     rows = []
     for dataset, subset in COMBOS:
-        print(f"=== {dataset}/{subset} ({'coldstart' if args.coldstart else 'known users'}) ===", flush=True)
-        res = evaluate_dataset(dataset, subset, coldstart=args.coldstart)
+        print(f"=== {dataset}/{subset} ({'coldstart' if args.coldstart else ('known-only' if args.known else 'all test users')}) ===", flush=True)
+        res = evaluate_dataset(dataset, subset, coldstart=args.coldstart, known=args.known)
         print(f"  n_test={res['n_test']} n_users={res['n_users']} "
               f"NDCG@10={res['ndcg10']:.4f} Recall@10={res['recall10']:.4f} | "
               f"NDCG@10_user={res['ndcg10_user']:.4f} Recall@10_user={res['recall10_user']:.4f}", flush=True)

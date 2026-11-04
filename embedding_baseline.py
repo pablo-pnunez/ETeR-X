@@ -53,8 +53,8 @@ MAX_REVIEWS_PER_ITEM = 50  # same as the original ZeroShotRS/ETeR-X (see its com
 
 # Port of the Ollama server to use; change it if Ollama is listening on a different
 # instance/GPU (useful to avoid competing for GPU with an ongoing training run).
-OLLAMA_HOST = "http://127.0.0.1:11435"
-OLLAMA_GPU_ID = 0  # must match the actual GPU used by the instance above
+OLLAMA_HOST = os.environ.get("ETERX_OLLAMA_HOST", "http://127.0.0.1:11435")
+OLLAMA_GPU_ID = int(os.environ.get("ETERX_OLLAMA_GPU", 0))  # must match the actual GPU used by the instance above
 MODELS = {"embgemma": "embeddinggemma", "qwen3emb": "qwen3-embedding:0.6b"}
 BATCH_SIZE = 32
 N_WORKERS = 4
@@ -97,7 +97,7 @@ def get_review_text_by_id(all_data, review_ids):
     return all_data.set_index("reviewId").loc[review_ids]["text"].fillna("").tolist()
 
 
-def evaluate_dataset(model_key, dataset, subset, coldstart=False):
+def evaluate_dataset(model_key, dataset, subset, coldstart=False, known=False):
     ollama_name = MODELS[model_key]
 
     # The reference checkpoint's MD5 is read from models/best_models.csv instead
@@ -122,6 +122,13 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
         # Identical filter to run_one_coldstart_eval.py / Main.py's known_users=False
         train_dev_users = train_dev.userId.unique()
         test = test[~test["userId"].isin(train_dev_users)]
+        test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
+
+    if known:
+        # Known users only: keep TEST reviews whose author appears in TRAIN_DEV, same
+        # population Baselines.py gives the CF baselines (unlike the default, unfiltered run).
+        train_dev_users = train_dev.userId.unique()
+        test = test[test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
 
     all_data = pd.read_pickle(ds.DATASET_PATH + "ALL_DATA")
@@ -222,13 +229,14 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False):
 if __name__ == "__main__":
     args = sys.argv[1:]
     coldstart = "--coldstart" in args
-    args = [a for a in args if a != "--coldstart"]
+    known = "--known" in args
+    args = [a for a in args if a not in ("--coldstart", "--known")]
     model_arg = args[0] if args and (args[0] in MODELS or args[0] == "all") else "all"
     combo_args = args[1:] if args and (args[0] in MODELS or args[0] == "all") else args
     targets = [tuple(c.split(":")) for c in combo_args] if combo_args else COMBOS
     model_keys = list(MODELS.keys()) if model_arg == "all" else [model_arg]
 
-    out_path = "results/embedding_results_coldstart.csv" if coldstart else "results/embedding_results.csv"
+    out_path = "results/embedding_results_coldstart.csv" if coldstart else ("results/embedding_results_known.csv" if known else "results/embedding_results.csv")
     rows = []
     if os.path.exists(out_path):
         rows = pd.read_csv(out_path).to_dict("records")
@@ -238,8 +246,8 @@ if __name__ == "__main__":
             if any(r["model"] == model_key and r["dataset"] == dataset and r["subset"] == subset for r in rows):
                 print(f"=== {model_key} {dataset}/{subset}: already done, skipping ===", flush=True)
                 continue
-            print(f"=== {model_key} {dataset}/{subset} ({'coldstart' if coldstart else 'known users'}) ===", flush=True)
-            res = evaluate_dataset(model_key, dataset, subset, coldstart=coldstart)
+            print(f"=== {model_key} {dataset}/{subset} ({'coldstart' if coldstart else ('known-only' if known else 'all test users')}) ===", flush=True)
+            res = evaluate_dataset(model_key, dataset, subset, coldstart=coldstart, known=known)
             print(f"  n_test={res['n_test']} n_users={res['n_users']} encode_time={res['encode_time_s']:.1f}s | "
                   f"NDCG@10={res['ndcg10']:.4f} Recall@10={res['recall10']:.4f} | "
                   f"NDCG@10_user={res['ndcg10_user']:.4f} Recall@10_user={res['recall10_user']:.4f}", flush=True)

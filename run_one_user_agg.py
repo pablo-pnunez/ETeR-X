@@ -25,6 +25,7 @@ parser.add_argument('--dataset', required=True, choices=['restaurants', 'pois', 
 parser.add_argument('--subset', required=True)
 parser.add_argument('--md5', required=True, help="md5 of the already-trained final checkpoint under models/<model>/<dataset>/<subset>/<md5>/")
 parser.add_argument('--gpu', type=int, default=0)
+parser.add_argument('--known', action='store_true', help="restrict TEST to users seen in TRAIN_DEV (same population as the CF baselines in Baselines.py); outputs get a _known suffix")
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
@@ -53,6 +54,13 @@ dts_cfg = cfg["dataset_config"]
 mdl_cfg = {"model": cfg["model"], "session": {"gpu": args.gpu, "mixed_precision": MIXED_PRECISION[args.model], "in_md5": False}}
 
 text_dataset = DATASET_CLASSES[args.dataset](dts_cfg)
+
+if args.known:
+    # Same filter as Baselines.py (users in TRAIN_DEV, one row per user/item pair)
+    train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
+    text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
+    text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep="last")
+    print(f"Known-users TEST: {len(text_dataset.DATA['TEST'])} reviews")
 model = MODEL_CLASSES[args.model](mdl_cfg, text_dataset)
 
 if model.MD5 != args.md5:
@@ -68,6 +76,6 @@ if not os.path.exists(checkpoint_path):
 model.train(dev=False, save_model=True)
 
 # Recomputes per-review metrics (already existed) + per-user metrics (new), saves final_user_agg_eval.csv
-model.evaluate(test=True, user_info=True)
+model.evaluate(test=True, user_info=True, out_tag="_known" if args.known else "")
 
 print(f"DONE {args.model}/{args.dataset}/{args.subset}/{args.md5}")
