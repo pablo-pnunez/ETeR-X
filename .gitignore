@@ -31,3 +31,16 @@ docs/SUSCOM/*.log
 docs/SUSCOM/*.out
 docs/SUSCOM/Main_SUSCOM.pdf
 docs/SUSCOM/*.spl
+
+# Paper sources and reviewer correspondence live outside this repo
+docs/
+
+# Local assistant/tool configuration
+.claude/
+CLAUDE.md
+
+# Large artifacts: model runs, local TF-Hub cache, script logs
+models/
+tfhub_modules/
+scripts/out/
+output/_backup_before_notebook_update/

@@ -3,7 +3,7 @@
 Pareto-front plot: accuracy (NDCG@10 / Recall@10) vs CO2 emissions.
 
 For the Efficiency section (\\subsubsection{Efficiency}, fig:efficiency) of
-docs/SUSCOM/Final_v1.tex. Reuses the same 5 models already compared there
+the manuscript. Reuses the same 5 models already compared there
 (ETeR-X, USEM, BERT + the zero-shot EmbeddingGemma/Qwen3-Embedding baselines,
 known users), so the numbers are consistent with the emissions already
 quoted in the text (summed over the 12 datasets).

@@ -11,8 +11,7 @@ written by previous customers, an intrinsically explainable association between
 relevant terms (nouns and adjectives, selected through part-of-speech filtering)
 and items, using a single shallow classifier. Because it never builds a user
 profile, it is by design robust to the *user cold-start* problem. The full
-methodology, datasets and results are described in the accompanying paper
-(`docs/paper/Main.tex`).
+methodology, datasets and results are described in the accompanying paper.
 
 This README covers how to set up the environment and reproduce every result
 reported in the paper, from raw data to the final tables and figures.
@@ -56,7 +55,6 @@ notebooks/                    RemoveFailedRuns.ipynb: deletes incomplete checkpo
                               behind by a training run that was interrupted or crashed
 models/                       Trained checkpoints, one folder per (model class, dataset, subset, config hash)
 data/                         Cached, preprocessed datasets (generated on first run, gitignored)
-docs/                         Paper source, reviewer correspondence and response analysis
 ```
 
 ## 1. Environment setup
@@ -269,5 +267,4 @@ not needed and can be left out.
 ## Citing
 
 The paper describing this system is currently under review; please contact
-the authors (see `docs/paper/Main.tex`) if you would like to cite this work
-ahead of publication.
+the authors if you would like to cite this work ahead of publication.

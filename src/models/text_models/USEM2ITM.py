@@ -68,7 +68,7 @@ class USEM2ITM(RSTModel):
         # .loc[] on an index with repeated keys returns ALL matching rows for
         # each queried key, making "text_data" longer than "dataframe" and misaligning the
         # rest of the array (a review's text paired with another review's id_item) when zip()
-        # is called below. See docs/reviews/analisis_revisiones.md.
+        # is called below.
         all_data = pd.read_pickle(self.DATASET.DATASET_PATH+"ALL_DATA")[["reviewId", "text"]]
         all_data = all_data.drop_duplicates(subset="reviewId", keep="first")
         text_data = all_data.set_index("reviewId").loc[dataframe.reviewId.values]["text"].values

@@ -13,8 +13,7 @@ Reuses ETeR-X's data pipeline (TextDataset/BOW2ITM): BOW_SEQUENCES is
 already L1-normalized per row and positionally aligned with TRAIN_DEV/TEST
 via the "bow" column, so a reviewId lookup is never needed. This
 makes this baseline immune to the class of duplicate-reviewId bug that
-affects USEM2ITM/BERT2ITM on Amazon (see docs/reviews/analisis_revisiones.md
-and the comment in BERT2ITM.__create_tfdata__/USEM2ITM.__create_tfdata__).
+affects USEM2ITM/BERT2ITM on Amazon (see the comment in BERT2ITM.__create_tfdata__/USEM2ITM.__create_tfdata__).
 
 Usage: python knn_bow_baseline.py [--coldstart]
 Output: results/knn_bow_results.csv, or results/knn_bow_results_coldstart.csv with --coldstart

@@ -4,7 +4,7 @@ Pareto-front plot: accuracy (NDCG@10 / Recall@10) vs number of parameters.
 
 Companion to pareto_efficiency_plot.py (which uses CO2 emissions as the cost
 axis instead) for the Efficiency section (\\subsubsection{Efficiency},
-fig:efficiency) of docs/SUSCOM/Final_v1.tex. Same 5 models (ETeR-X, USEM,
+fig:efficiency) of the manuscript. Same 5 models (ETeR-X, USEM,
 BERT + the zero-shot EmbeddingGemma/Qwen3-Embedding baselines, known users).
 
 Each model is reduced to one point: mean number of parameters over the 12
