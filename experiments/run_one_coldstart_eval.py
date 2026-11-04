@@ -4,13 +4,13 @@ Reproduces, for an already-trained model/dataset, the evaluation of the
 paper's second task (Section~\ref{sec:results_b}, "user cold-start"): the
 same weights as the first task/"known users" (nothing is retrained), but
 filtering TEST down to only users that do NOT appear in TRAIN_DEV -- this
-replicates exactly the logic Main.py uses when known_users=False, the only
-implementation of that filter that exists in the repo (Baselines.py, the
+replicates exactly the logic experiments/Main.py uses when known_users=False, the only
+implementation of that filter that exists in the repo (experiments/Baselines.py, the
 generator of the "known users" table for the CF baselines, only implements
 the opposite filter: keep known users).
 
 Usage:
-    python run_one_coldstart_eval.py --model BERT2ITM --dataset amazon --subset fashion --md5 7f21293988cf9aa7e9b2b02465f497e3
+    python experiments/run_one_coldstart_eval.py --model BERT2ITM --dataset amazon --subset fashion --md5 7f21293988cf9aa7e9b2b02465f497e3
 """
 import argparse
 import json
@@ -48,7 +48,7 @@ mdl_cfg = {"model": cfg["model"], "session": {"gpu": args.gpu, "mixed_precision"
 
 text_dataset = DATASET_CLASSES[args.dataset](dts_cfg)
 
-# --- Cold-start filter, exact replica of Main.py's known_users=False ---
+# --- Cold-start filter, exact replica of experiments/Main.py's known_users=False ---
 train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
 text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
 text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep='last', inplace=False)

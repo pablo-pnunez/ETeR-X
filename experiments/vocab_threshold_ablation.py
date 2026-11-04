@@ -9,11 +9,11 @@ the effect of vocabulary size.
 pct=10 is not retrained: it already exists as the current BOW2ITM checkpoint
 for each dataset; its metrics are read directly from that checkpoint.
 
-Each pct is trained in a separate process (usage: `python vocab_threshold_ablation.py <dataset> <subset> <pct> dev|final|eval`)
+Each pct is trained in a separate process (usage: `python experiments/vocab_threshold_ablation.py <dataset> <subset> <pct> dev|final|eval`)
 to avoid reusing Keras/TensorFlow state across consecutive training runs
 within the same process.
 
-Usage: python vocab_threshold_ablation.py <dataset> <subset> <pct> <dev|final|eval> [gpu]
+Usage: python experiments/vocab_threshold_ablation.py <dataset> <subset> <pct> <dev|final|eval> [gpu]
   dataset/subset: restaurants/gijon, pois/london, amazon/fashion, ...
 """
 import json
@@ -30,6 +30,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = gpu
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import pandas as pd
+from src.config import data_path
 from src.datasets.text_datasets.RestaurantDataset import RestaurantDataset
 from src.datasets.text_datasets.POIDataset import POIDataset
 from src.datasets.text_datasets.AmazonDataset import AmazonDataset
@@ -42,15 +43,15 @@ DATASET_CLASSES = {"restaurants": RestaurantDataset, "pois": POIDataset, "amazon
 # hyperparameter search. Taken directly from their cfg.json (Table 8).
 DATASET_DEFAULTS = {
     ("restaurants", "gijon"): {
-        "data_path": "/media/nas/datasets/tripadvisor/restaurants/", "language": "es",
+        "data_path": data_path("tripadvisor", "restaurants"), "language": "es",
         "lr": 0.001, "final_lr": 1e-05, "batch": 1024,
     },
     ("pois", "london"): {
-        "data_path": "/media/nas/datasets/tripadvisor/pois/", "language": "es",
+        "data_path": data_path("tripadvisor", "pois"), "language": "es",
         "lr": 0.001, "final_lr": 1e-05, "batch": 1024,
     },
     ("amazon", "fashion"): {
-        "data_path": "/media/nas/datasets/amazon/", "language": "en",
+        "data_path": data_path("amazon"), "language": "en",
         "lr": 0.005, "final_lr": 5e-05, "batch": 8192,
     },
 }

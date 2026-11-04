@@ -7,6 +7,7 @@ import random
 import hashlib
 import warnings
 import numpy as np
+from src.config import canonical_for_md5
 
 
 class ModelClass:
@@ -49,7 +50,7 @@ class ModelClass:
     def __get_md5__(self):
         # Gets the parts of the configuration dict that can alter a model (e.g. the gpu doesn't,
         # but the user percentage does). Returns the MD5.
-        res = {"dataset_config": self.DATASET.CONFIG}
+        res = {"dataset_config": canonical_for_md5(self.DATASET.CONFIG)}
         for k in self.CONFIG.keys():
             if ("in_md5" not in self.CONFIG[k].keys()) or ("in_md5" in self.CONFIG[k].keys() and self.CONFIG[k]["in_md5"]):
                 res[k] = self.CONFIG[k]

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from src.Common import get_pickle, print_w
+from src.config import canonical_for_md5
 
 import os
 import json
@@ -43,4 +44,4 @@ class DatasetClass:
 
     def __get_md5__(self):
         """Gets an MD5 hash from the dataset configuration"""
-        return hashlib.md5(str(self.CONFIG).encode()).hexdigest()
+        return hashlib.md5(str(canonical_for_md5(self.CONFIG)).encode()).hexdigest()

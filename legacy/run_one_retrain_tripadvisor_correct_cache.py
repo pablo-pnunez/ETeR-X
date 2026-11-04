@@ -5,7 +5,7 @@ post-fix dataset cache (pos_tagging_fix=true) that BOW2ITM/ETeR-X, the CF baseli
 kNN-BoW and the embedding baselines already use, so that every model is evaluated on
 the SAME train/test split. The existing USEM2ITM/BERT2ITM TripAdvisor checkpoints were
 trained on a pre-fix cache whose TEST set shares only 10-35% of its reviews with the
-post-fix one. Same procedure as run_one_retrain_amazon_correct_cache.py, generalized to
+post-fix one. Same procedure as legacy/run_one_retrain_amazon_correct_cache.py, generalized to
 any dataset: hyperparameters (learning rate, batch size, ...) are those of the existing
 checkpoint listed in --old-md5 (the grid search is NOT repeated); only dataset_config changes
 (copied from the BOW2ITM checkpoint listed in --bow-md5).
@@ -16,7 +16,7 @@ and on the known-users-only TEST (outputs with the _known suffix), and appends t
 new md5 to results/tripadvisor_retrain_md5.csv.
 
 Usage:
-    python run_one_retrain_tripadvisor_correct_cache.py --model USEM2ITM --dataset pois --subset paris \
+    python legacy/run_one_retrain_tripadvisor_correct_cache.py --model USEM2ITM --dataset pois --subset paris \
         --old-md5 <existing USEM md5> --bow-md5 <BOW2ITM md5> --phase dev|final
 """
 import argparse

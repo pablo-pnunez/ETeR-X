@@ -15,7 +15,7 @@ dataset, same convention as the radar plots). A model is on the Pareto
 front if no other model has both lower emissions and an equal-or-higher
 metric.
 
-Usage: python pareto_efficiency_plot.py
+Usage: python analysis/pareto_efficiency_plot.py
 Output: output/pareto_efficiency_ndcg.pdf, output/pareto_efficiency_recall.pdf
 """
 import csv

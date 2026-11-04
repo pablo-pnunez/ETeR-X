@@ -8,14 +8,14 @@ MOSTPOP2ITM has no weights to load (its "model" is a fixed popularity vector,
 computed directly from TRAIN_DEV in get_model(), see
 src/models/text_models/MOSTPOP2ITM.py): it is enough to build it on top of
 the already-loaded dataset, no train()/checkpoint needed, the same way
-run_one_coldstart_eval.py does for BOW2ITM/USEM2ITM/BERT2ITM (but that script
+experiments/run_one_coldstart_eval.py does for BOW2ITM/USEM2ITM/BERT2ITM (but that script
 does not support MOSTPOP2ITM). Reports, for each dataset, both NDCG@10/Recall@10
 on the full TEST set ("known", unfiltered -- same definition used by
-knn_bow_baseline.py/embedding_baseline.py without --coldstart) and on the
+baselines/knn_bow_baseline.py/embedding_baseline.py without --coldstart) and on the
 TEST set filtered to users absent from TRAIN_DEV ("coldstart", identical
-filter to Main.py's known_users=False / run_one_coldstart_eval.py).
+filter to experiments/Main.py's known_users=False / experiments/run_one_coldstart_eval.py).
 
-Usage: python mostpop_coldstart.py [gpu]
+Usage: python baselines/mostpop_coldstart.py [gpu]
 Output: results/mostpop_coldstart_results.csv
 """
 import json
@@ -59,7 +59,7 @@ for dataset, subset in COMBOS:
     assert model.MD5 == md5, f"MD5 mismatch for {dataset}/{subset}: {model.MD5} != {md5}"
     model.train(dev=False, save_model=True)
 
-    # --- "known": full TEST set, unfiltered (same definition as knn_bow_baseline.py/embedding_baseline.py without --coldstart) ---
+    # --- "known": full TEST set, unfiltered (same definition as baselines/knn_bow_baseline.py/embedding_baseline.py without --coldstart) ---
     ret_known = model.evaluate(test=True, user_info=False, verbose=False)
 
     # --- "known_only": TEST restricted to users seen in TRAIN_DEV (same population as the CF baselines) ---
@@ -70,7 +70,7 @@ for dataset, subset in COMBOS:
     ret_knownonly = model.evaluate(test=True, user_info=False, verbose=False)
     text_dataset.DATA["TEST"] = original_test
 
-    # --- "coldstart": identical filter to Main.py's known_users=False / run_one_coldstart_eval.py ---
+    # --- "coldstart": identical filter to experiments/Main.py's known_users=False / experiments/run_one_coldstart_eval.py ---
     train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][~text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep="last")

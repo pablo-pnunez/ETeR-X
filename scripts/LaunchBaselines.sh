@@ -18,7 +18,7 @@ for DATASET_NAME in ${!DATASETS[@]}; do
     # source /media/nas/pperez/miniconda3/etc/profile.d/conda.sh
     # conda activate TAV_text
 
-    nohup /media/nas/pperez/conda/ns3/envs/ETeR-X/bin/python -u Baselines.py -gpu $GPU -dst $DATASET_NAME -sst $SUBSET_NAME &
+    nohup ${PYTHON:-python} -u experiments/Baselines.py -gpu $GPU -dst $DATASET_NAME -sst $SUBSET_NAME &
   
     GPU=$(($(($GPU+1%2))%2))
 

@@ -19,43 +19,42 @@ reported in the paper, from raw data to the final tables and figures.
 ## Repository structure
 
 ```
-src/                        Core library: dataset loaders, models, metrics
+src/                        Core library: dataset loaders, models, metrics, config
+  config.py                  Paths (ETERX_DATA_DIR) and path-independent config hashing
   datasets/text_datasets/    One loader per data source (Amazon, POIs, Restaurants)
   models/text_models/        RSTModel (base class) and its subclasses:
                               BOW2ITM (ETeR-X itself), USEM2ITM, BERT2ITM, MOSTPOP2ITM
-Main.py                     Grid-search training entry point (one model/dataset/subset at a time)
-FinalTrain.py                Trains the final model with already-chosen hyperparameters
-                              and measures training/test emissions with codecarbon
-Baselines.py                 Collaborative-filtering baselines via Cornac
-                              (MostPop, BPR, EASE^R, BiVAE, plus MF/OnlineIBPR, unused in the paper)
-knn_bow_baseline.py           Non-neural kNN-BoW retrieval baseline
-embedding_baseline.py         Zero-shot embedding baselines (EmbeddingGemma, Qwen3-Embedding)
-mostpop_coldstart.py          MostPop re-evaluated under the user-cold-start protocol
-run_one_coldstart_eval.py     Re-evaluates one trained checkpoint (ETeR-X/USEM/BERT) under
-                              the user-cold-start protocol, without retraining
-run_one_user_agg.py           Recomputes per-user aggregated metrics for one trained checkpoint
-run_one_retrain_amazon_fix.py,
-run_one_retrain_amazon_correct_cache.py
-                              One-off retraining scripts for USEM/BERT on Amazon, kept for
-                              provenance; see their docstrings for the specific issue each fixes
-vocab_threshold_ablation.py   Sensitivity ablation for the BoW vocabulary-size threshold
-min_reviews_ablation.py       Sensitivity ablation for the minimum-reviews-per-item threshold
-PlotResults.ipynb             Builds the final result tables/figures directly from models/
-Example.ipynb                 Minimal usage example: load a trained model, get a recommendation
-Limitations.ipynb             Generates the query examples in the limitations table (tab:limitations):
-                              missing adjectives/nouns and negation, one model per domain
-CollectResults.py             Legacy Excel-report helper, superseded by PlotResults.ipynb
-results/                      Raw, per-script output CSVs from the scripts above (Section 3)
-examples/                     Assets for Example.ipynb (a pre-trained checkpoint, zipped)
-output/                       Final figures (PDF) and aggregated tables (xlsx) from PlotResults.ipynb
-scripts/                      Bash drivers that loop Main.py/FinalTrain.py/Baselines.py over every
-                              dataset/subset (and, for Main.py, model/hyperparameter combination),
-                              launching a bounded number of them in parallel across GPUs
-notebooks/                    RemoveFailedRuns.ipynb: deletes incomplete checkpoint folders left
-                              behind by a training run that was interrupted or crashed
-models/                       Trained checkpoints, one folder per (model class, dataset, subset, config hash)
-data/                         Cached, preprocessed datasets (generated on first run, gitignored)
+experiments/                Training, evaluation and ablation entry points
+  Main.py                     Grid-search training (one model/dataset/subset at a time)
+  FinalTrain.py               Final model with the chosen hyperparameters + codecarbon emissions
+  Baselines.py                Cornac baselines (MostPop, BPR, EASE^R, BiVAE; MF/OnlineIBPR unused)
+  run_one_coldstart_eval.py   Re-evaluates one checkpoint under the user-cold-start protocol
+  run_one_known_vs_cold_eval.py  Known-user vs cold-user comparison for one checkpoint
+  run_one_user_agg.py         Per-user aggregated metrics for one checkpoint
+  vocab_threshold_ablation.py, min_reviews_ablation.py   Sensitivity ablations
+  CollectResults.py           Legacy Excel-report helper (superseded by PlotResults.ipynb)
+baselines/                  knn_bow_baseline.py, embedding_baseline.py (EmbeddingGemma,
+                            Qwen3-Embedding), mostpop_coldstart.py
+analysis/                   faithfulness_eval.py, faithfulness_examples.py, pareto_*_plot.py,
+                            plot_efficiency_figure.py
+legacy/                     One-off retraining scripts kept for provenance (see their docstrings)
+scripts/                    Bash drivers looping the entry points over datasets/subsets/GPUs;
+                            prune_runs.py frees disk by deleting weights not needed for the results
+tests/                      pytest suite (python -m pytest)
+PlotResults.ipynb           Builds the final result tables/figures directly from models/
+Example.ipynb               Minimal usage example: load a trained model, get a recommendation
+Limitations.ipynb           Query examples for the limitations table
+notebooks/                  RemoveFailedRuns.ipynb: deletes incomplete checkpoint folders
+results/                    Raw, per-script output CSVs
+examples/                   Assets for Example.ipynb (a pre-trained checkpoint, zipped)
+output/                     Final figures (PDF) and aggregated tables (xlsx)
+models/                     Trained checkpoints, one folder per (model, dataset, subset, config hash);
+                            only best_models.csv and the aggregate xlsx are tracked
+data/                       Cached, preprocessed datasets (generated on first run, gitignored)
 ```
+
+Run every script from the repository root (e.g. `python experiments/Main.py ...`);
+notebooks also assume the repository root as working directory.
 
 ## 1. Environment setup
 
@@ -63,6 +62,13 @@ data/                         Cached, preprocessed datasets (generated on first 
 conda create --name ETeR-X python=3.9.18
 conda activate ETeR-X
 pip install -r requirements.txt
+pip install -e .          # makes the `src` package importable from experiments/, baselines/, ...
+```
+
+or `make env` (uses `environment.yml`). Tell the code where the raw datasets live:
+
+```bash
+export ETERX_DATA_DIR=/path/to/datasets   # contains amazon/, tripadvisor/restaurants/, tripadvisor/pois/
 ```
 
 This covers everything needed to train and evaluate ETeR-X, USEM, BERT-Tiny,
@@ -70,20 +76,20 @@ MostPop, BPR and EASE^R, and to run the ablations.
 
 Two baselines have additional, optional requirements:
 
-- **BiVAE and OnlineIBPR** (Cornac baselines, included in `Baselines.py` but not
+- **BiVAE and OnlineIBPR** (Cornac baselines, included in `experiments/Baselines.py` but not
   reported in the paper's main tables) need PyTorch. It is not pinned in
   `requirements.txt` because the right build depends on your CUDA version;
   install it from the instructions at <https://pytorch.org/get-started/locally/>
-  before running `Baselines.py` with these two models enabled. Every model
+  before running `experiments/Baselines.py` with these two models enabled. Every model
   actually reported in the paper (MostPop, BPR, EASE^R) runs without it.
-- **EmbeddingGemma and Qwen3-Embedding** (`embedding_baseline.py`) are served
+- **EmbeddingGemma and Qwen3-Embedding** (`baselines/embedding_baseline.py`) are served
   through [Ollama](https://ollama.com) rather than loaded in-process. Install
   Ollama, start it, and pull both models before running the script:
   ```bash
   ollama pull embeddinggemma
   ollama pull qwen3-embedding:0.6b
   ```
-  `embedding_baseline.py` talks to Ollama over HTTP (`OLLAMA_HOST` at the top
+  `baselines/embedding_baseline.py` talks to Ollama over HTTP (`OLLAMA_HOST` at the top
   of the file); adjust the host/port and `OLLAMA_GPU_ID` if your Ollama
   instance runs on a different port or GPU than the one used for training.
 
@@ -111,9 +117,10 @@ Datasets are not distributed with this repository. Each loader in
   same columns (`reviewId`, `userId`, `itemId`/`restaurantId`, `rating`,
   `date`, `text`, `title`) is the fastest path to using your own data.
 
-Once the raw files are in place, point `data_path` (in `Main.py`,
-`FinalTrain.py`, or any of the ablation/baseline scripts) at their parent
-directory. The first run for a given `(dataset, subset)` preprocesses and
+Once the raw files are in place, set `ETERX_DATA_DIR` to their parent directory (default: `./datasets`; see
+`src/config.py`). Checkpoint and cache folder names are hashes of the configuration;
+the hash ignores where the data lives, so a different `ETERX_DATA_DIR` still matches the
+folders listed in `models/best_models.csv`. The first run for a given `(dataset, subset)` preprocesses and
 caches the result under `data/<DatasetClass>/<config hash>/`; subsequent runs
 with the same configuration reuse the cache instead of reprocessing.
 
@@ -132,11 +139,11 @@ guessing from the directory listing.
 ### 3.1 Train ETeR-X, USEM and BERT-Tiny
 
 ```bash
-python Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 0   # hyperparameter search (dev split)
-python Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 3   # final training + evaluation
+python experiments/Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 0   # hyperparameter search (dev split)
+python experiments/Main.py -dst restaurants -sst gijon -mn BOW2ITM -stg 3   # final training + evaluation
 ```
 `-mn` selects the model (`BOW2ITM` = ETeR-X, `USEM2ITM`, `BERT2ITM`,
-`MOSTPOP2ITM`), `-dst`/`-sst` the dataset/subset. See `Main.py`'s
+`MOSTPOP2ITM`), `-dst`/`-sst` the dataset/subset. See `experiments/Main.py`'s
 `parse_cmd_args` (in `src/Common.py`) for the full list of flags (learning
 rate, batch size, vocabulary threshold, etc.). Repeat for each of these four
 models on every dataset/subset listed in Table 1 of the paper, or use
@@ -144,11 +151,11 @@ models on every dataset/subset listed in Table 1 of the paper, or use
 once (bounded parallelism across GPUs; edit the `DATASETS`/`MODELS` arrays at
 the top to select which ones to run).
 
-`FinalTrain.py` re-trains the already-selected best configuration for a
+`experiments/FinalTrain.py` re-trains the already-selected best configuration for a
 combination while also measuring training/inference carbon emissions with
 `codecarbon`:
 ```bash
-python FinalTrain.py -dataset restaurants -subset gijon -model BOW2ITM
+python experiments/FinalTrain.py -dataset restaurants -subset gijon -model BOW2ITM
 ```
 `scripts/FinalTrain.sh` does the same for every combination, one model at a
 time (edit its `MODELS` array).
@@ -156,7 +163,7 @@ time (edit its `MODELS` array).
 ### 3.2 Collaborative-filtering baselines (MostPop, BPR, EASE^R, BiVAE)
 
 ```bash
-python Baselines.py -dst restaurants -sst gijon
+python experiments/Baselines.py -dst restaurants -sst gijon
 ```
 Trains and evaluates all Cornac-based baselines for one dataset/subset at
 once via a single `cornac.experiment.Experiment`, and writes
@@ -171,19 +178,19 @@ number. `scripts/LaunchBaselines.sh` runs this for every dataset/subset.
 ### 3.3 kNN-BoW, EmbeddingGemma, Qwen3-Embedding, MostPop under both protocols
 
 ```bash
-python knn_bow_baseline.py                  # known users
-python knn_bow_baseline.py --coldstart       # user cold-start
+python baselines/knn_bow_baseline.py                  # known users
+python baselines/knn_bow_baseline.py --coldstart       # user cold-start
 
-python embedding_baseline.py all             # both embedding models, known users
-python embedding_baseline.py all --coldstart
+python baselines/embedding_baseline.py all             # both embedding models, known users
+python baselines/embedding_baseline.py all --coldstart
 
-python mostpop_coldstart.py                  # both protocols in one run
+python baselines/mostpop_coldstart.py                  # both protocols in one run
 ```
 Each of these iterates over all twelve datasets on its own and writes its
 own output CSV under `results/` (`knn_bow_results.csv`, `embedding_results.csv`,
 `mostpop_coldstart_results.csv`, plus `*_coldstart.csv` variants); none of
 them retrain ETeR-X, they only reuse its already-selected vocabulary and, for
-`mostpop_coldstart.py`, its dataset split.
+`baselines/mostpop_coldstart.py`, its dataset split.
 
 ### 3.4 Per-user aggregated metrics and user-cold-start re-evaluation
 
@@ -192,11 +199,11 @@ per user rather than per review, to match Cornac's evaluation semantics for
 the CF baselines. For ETeR-X/USEM/BERT this requires an extra pass over an
 already-trained checkpoint:
 ```bash
-python run_one_user_agg.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash from best_models.csv>
+python experiments/run_one_user_agg.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash from best_models.csv>
 ```
 and, for the user-cold-start comparison (Section 4.3.3 / Appendix B):
 ```bash
-python run_one_coldstart_eval.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash>
+python experiments/run_one_coldstart_eval.py --model BOW2ITM --dataset restaurants --subset gijon --md5 <hash>
 ```
 Both scripts run against a single checkpoint per invocation, in a separate
 process, to avoid reusing a TensorFlow/GPU session across models. To run
@@ -206,7 +213,7 @@ python - <<'PY'
 import pandas as pd, subprocess
 best = pd.read_csv("models/best_models.csv")
 for _, row in best[best.model.isin(["BOW2ITM", "USEM2ITM", "BERT2ITM"])].iterrows():
-    subprocess.run(["python", "run_one_user_agg.py",
+    subprocess.run(["python", "experiments/run_one_user_agg.py",
                      "--model", row.model, "--dataset", row.dataset,
                      "--subset", row.subset, "--md5", row.model_md5])
 PY
@@ -215,13 +222,13 @@ PY
 ### 3.5 Sensitivity ablations
 
 ```bash
-python vocab_threshold_ablation.py restaurants gijon 5 dev     # find epochs for this threshold
-python vocab_threshold_ablation.py restaurants gijon 5 final   # train with that many epochs
-python vocab_threshold_ablation.py restaurants gijon 5 eval    # evaluate, append to results/vocab_ablation_results.csv
+python experiments/vocab_threshold_ablation.py restaurants gijon 5 dev     # find epochs for this threshold
+python experiments/vocab_threshold_ablation.py restaurants gijon 5 final   # train with that many epochs
+python experiments/vocab_threshold_ablation.py restaurants gijon 5 eval    # evaluate, append to results/vocab_ablation_results.csv
 
-python min_reviews_ablation.py restaurants gijon 5 dev
-python min_reviews_ablation.py restaurants gijon 5 final
-python min_reviews_ablation.py restaurants gijon 5 eval        # appends to results/min_reviews_ablation_results.csv
+python experiments/min_reviews_ablation.py restaurants gijon 5 dev
+python experiments/min_reviews_ablation.py restaurants gijon 5 final
+python experiments/min_reviews_ablation.py restaurants gijon 5 eval        # appends to results/min_reviews_ablation_results.csv
 ```
 Both scripts sweep one hyperparameter (`bow_pct_words` and `min_reviews_rst`
 respectively) while keeping every other choice fixed at its grid-searched

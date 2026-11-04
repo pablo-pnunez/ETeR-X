@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eterx"
+version = "0.1.0"
+description = "ETeR-X: query-based text recommender, robust to user cold-start"
+requires-python = ">=3.9"
+# Pinned dependencies live in requirements.txt (pip install -r requirements.txt).
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+namespaces = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -61,7 +61,7 @@ class RSTModel(KerasModelClass):
         (which is what Keras' `evaluate()`/`model.evaluate()` above does).
 
         This replicates the semantics of Cornac's `ranking_eval` (used to evaluate the CF
-        baselines -MostPop/EASE^R/BiVAE- in Baselines.py): a single prediction per user, compared
+        baselines -MostPop/EASE^R/BiVAE- in experiments/Baselines.py): a single prediction per user, compared
         against the set of ALL their relevant items in test at once. Without this adjustment, a
         user with several test reviews counts several times in the text models' average
         but only once in the CF baselines', which makes the columns of

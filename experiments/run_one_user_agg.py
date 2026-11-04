@@ -12,7 +12,7 @@ combination in models/best_models.csv), to avoid reusing the
 TensorFlow/GPU session across different models within the same process.
 
 Usage:
-    python run_one_user_agg.py --model BOW2ITM --dataset pois --subset paris --md5 8d14e01f...
+    python experiments/run_one_user_agg.py --model BOW2ITM --dataset pois --subset paris --md5 8d14e01f...
 """
 import argparse
 import json
@@ -25,7 +25,7 @@ parser.add_argument('--dataset', required=True, choices=['restaurants', 'pois', 
 parser.add_argument('--subset', required=True)
 parser.add_argument('--md5', required=True, help="md5 of the already-trained final checkpoint under models/<model>/<dataset>/<subset>/<md5>/")
 parser.add_argument('--gpu', type=int, default=0)
-parser.add_argument('--known', action='store_true', help="restrict TEST to users seen in TRAIN_DEV (same population as the CF baselines in Baselines.py); outputs get a _known suffix")
+parser.add_argument('--known', action='store_true', help="restrict TEST to users seen in TRAIN_DEV (same population as the CF baselines in experiments/Baselines.py); outputs get a _known suffix")
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
@@ -56,7 +56,7 @@ mdl_cfg = {"model": cfg["model"], "session": {"gpu": args.gpu, "mixed_precision"
 text_dataset = DATASET_CLASSES[args.dataset](dts_cfg)
 
 if args.known:
-    # Same filter as Baselines.py (users in TRAIN_DEV, one row per user/item pair)
+    # Same filter as experiments/Baselines.py (users in TRAIN_DEV, one row per user/item pair)
     train_dev_users = text_dataset.DATA["TRAIN_DEV"].userId.unique()
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"][text_dataset.DATA["TEST"]["userId"].isin(train_dev_users)]
     text_dataset.DATA["TEST"] = text_dataset.DATA["TEST"].drop_duplicates(subset=["userId", "id_item"], keep="last")

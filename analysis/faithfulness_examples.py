@@ -8,12 +8,12 @@ about and that have between --min_terms and --max_terms relevant terms, take the
 --n_examples after a seeded shuffle. For each one it prints the query terms ranked by
 W[:, p_hat] (the explanation), the top-3 recommended items, and the effect on p_hat of
 removing the top-1 / top-2 explanation terms vs. random terms (same intervention as
-faithfulness_eval.py: L1 re-normalisation, full model incl. batch norm).
+analysis/faithfulness_eval.py: L1 re-normalisation, full model incl. batch norm).
 
 The TEST dataframe stores the already-processed relevant terms, not the raw review text,
 so the query is shown as its relevant terms (what the model actually sees).
 
-Usage: python faithfulness_examples.py [--gpu 1] [--n_examples 3] [--seed 0]
+Usage: python analysis/faithfulness_examples.py [--gpu 1] [--n_examples 3] [--seed 0]
 Output: results/faithfulness/examples.csv (+ printed report)
 """
 import argparse

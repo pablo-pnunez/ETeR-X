@@ -17,7 +17,7 @@ Uses Ollama as the inference server, restricted to a specific GPU
 (OLLAMA_HOST/gpu_ids below) so it can run in parallel with
 training other models on a different GPU.
 
-Usage: python embedding_baseline.py [model] [dataset:subset ...]
+Usage: python baselines/embedding_baseline.py [model] [dataset:subset ...]
      model: embgemma | qwen3emb | all (default)
 """
 import concurrent.futures
@@ -119,14 +119,14 @@ def evaluate_dataset(model_key, dataset, subset, coldstart=False, known=False):
     n_items = ds.DATA["N_ITEMS"]
 
     if coldstart:
-        # Identical filter to run_one_coldstart_eval.py / Main.py's known_users=False
+        # Identical filter to experiments/run_one_coldstart_eval.py / experiments/Main.py's known_users=False
         train_dev_users = train_dev.userId.unique()
         test = test[~test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
 
     if known:
         # Known users only: keep TEST reviews whose author appears in TRAIN_DEV, same
-        # population Baselines.py gives the CF baselines (unlike the default, unfiltered run).
+        # population experiments/Baselines.py gives the CF baselines (unlike the default, unfiltered run).
         train_dev_users = train_dev.userId.unique()
         test = test[test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")

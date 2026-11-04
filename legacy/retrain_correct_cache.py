@@ -34,7 +34,7 @@ def has_nan(path):
 def run(d, s, phase, fp32):
     old, bow = md5(model, d, s), md5("BOW2ITM", d, s)
     tag = f"{d}_{s}_{phase}" + ("_fp32" if fp32 else "")
-    cmd = [PY, "-u", "run_one_retrain_tripadvisor_correct_cache.py", "--model", model, "--dataset", d, "--subset", s,
+    cmd = [PY, "-u", "legacy/run_one_retrain_tripadvisor_correct_cache.py", "--model", model, "--dataset", d, "--subset", s,
            "--old-md5", old, "--bow-md5", bow, "--phase", phase, "--gpu", gpu] + (["--fp32"] if fp32 else [])
     with open(f"{OUT}/{tag}.txt", "w") as f:
         rc = subprocess.call(cmd, stdout=f, stderr=subprocess.STDOUT)

@@ -7,7 +7,7 @@ USEM, BERT, EmbeddingGemma and Qwen3-Embedding, using:
     retrained on the ETeR-X split (results/tripadvisor_retrain_md5.csv);
   * encoding emissions of the zero-shot embedding baselines (results/embedding_results.csv);
   * parameter counts from output/param_results.xlsx (ETeR-X/USEM/BERT) and the fixed sizes of the embedding models.
-Usage: python plot_efficiency_figure.py [out.pdf]
+Usage: python analysis/plot_efficiency_figure.py [out.pdf]
 """
 import csv
 import sys

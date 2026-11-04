@@ -15,13 +15,13 @@ via the "bow" column, so a reviewId lookup is never needed. This
 makes this baseline immune to the class of duplicate-reviewId bug that
 affects USEM2ITM/BERT2ITM on Amazon (see the comment in BERT2ITM.__create_tfdata__/USEM2ITM.__create_tfdata__).
 
-Usage: python knn_bow_baseline.py [--coldstart]
+Usage: python baselines/knn_bow_baseline.py [--coldstart]
 Output: results/knn_bow_results.csv, or results/knn_bow_results_coldstart.csv with --coldstart
   (dataset, subset, n_test, ndcg10, recall10, ndcg10_user, recall10_user)
 
 --coldstart restricts TEST to reviews from users that do NOT appear in TRAIN_DEV,
-the same filter run_one_coldstart_eval.py uses for ETeR-X/USEM/BERT
-(identical to Main.py's known_users=False). Since this baseline never
+the same filter experiments/run_one_coldstart_eval.py uses for ETeR-X/USEM/BERT
+(identical to experiments/Main.py's known_users=False). Since this baseline never
 looks at the user's identity, the known-vs-coldstart comparison serves
 to empirically confirm that invariance rather than assume it.
 """
@@ -74,13 +74,13 @@ def evaluate_dataset(dataset, subset, coldstart=False, known=False):
     test = ds.DATA["TEST"]
 
     if coldstart:
-        # Identical filter to run_one_coldstart_eval.py / Main.py's known_users=False
+        # Identical filter to experiments/run_one_coldstart_eval.py / experiments/Main.py's known_users=False
         train_dev_users = train_dev.userId.unique()
         test = test[~test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")
     if known:
         # Known users only: keep TEST reviews whose author appears in TRAIN_DEV, same
-        # population Baselines.py gives the CF baselines (unlike the default, unfiltered run).
+        # population experiments/Baselines.py gives the CF baselines (unlike the default, unfiltered run).
         train_dev_users = train_dev.userId.unique()
         test = test[test["userId"].isin(train_dev_users)]
         test = test.drop_duplicates(subset=["userId", "id_item"], keep="last")

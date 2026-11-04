@@ -2,14 +2,14 @@
 """
 Per-review NDCG@10/Recall@10 of an already-trained model on two disjoint TEST
 partitions, with nothing retrained: reviews by users seen in TRAIN_DEV
-("known-only", the same population Baselines.py gives the CF baselines) and
-reviews by users absent from TRAIN_DEV ("cold", Main.py's known_users=False).
-Both partitions keep one row per (user, item) pair, like Baselines.py.
+("known-only", the same population experiments/Baselines.py gives the CF baselines) and
+reviews by users absent from TRAIN_DEV ("cold", experiments/Main.py's known_users=False).
+Both partitions keep one row per (user, item) pair, like experiments/Baselines.py.
 
 Appends one row per partition to results/review_eval_known_vs_cold.csv.
 
 Usage:
-    python run_one_known_vs_cold_eval.py --model BOW2ITM --dataset pois --subset paris --md5 <md5>
+    python experiments/run_one_known_vs_cold_eval.py --model BOW2ITM --dataset pois --subset paris --md5 <md5>
 """
 import argparse
 import csv

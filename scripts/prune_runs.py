@@ -3,12 +3,12 @@
 Dry-run by default; pass --apply to actually delete. What is removed:
 
   A. dev/weights.*            Dev-phase (validation) weights, in every run. Only
-                              dev/log.csv etc. are read afterwards (CollectResults.py);
+                              dev/log.csv etc. are read afterwards (experiments/CollectResults.py);
                               final evaluation loads the root-level `weights`.
   B. _pre_reviewid_fix_backup Obsolete backups made before the reviewId fix.
   C. weights.* (root)         Final weights of runs that are NOT a "keep" run. A run is
                               kept when its md5 is in models/best_models.csv or is
-                              referenced by any file in results/, scripts/ or root *.py.
+                              referenced by any file in results/, scripts/ or any repo *.py.
 
 Logs, cfg.json, emissions and *eval*.csv files are never touched.
 """
@@ -35,7 +35,7 @@ def keep_md5s():
     keep = set(pd.read_csv(os.path.join(MODELS, "best_models.csv")).model_md5)
     files = glob.glob(os.path.join(ROOT, "results", "**", "*"), recursive=True)
     files += glob.glob(os.path.join(ROOT, "scripts", "**", "*.sh"), recursive=True)
-    files += glob.glob(os.path.join(ROOT, "*.py"))
+    files += [f for f in glob.glob(os.path.join(ROOT, "**", "*.py"), recursive=True) if "/models/" not in f]
     for f in files:
         if os.path.isfile(f):
             with open(f, errors="ignore") as fh:

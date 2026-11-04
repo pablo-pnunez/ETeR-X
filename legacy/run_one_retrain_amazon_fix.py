@@ -4,7 +4,7 @@ Retrains a USEM2ITM/BERT2ITM model on an Amazon dataset FROM SCRATCH, after
 fixing the duplicate-reviewId bug in __create_tfdata__ (see
 src/models/text_models/USEM2ITM.py and BERT2ITM.py).
 
-Unlike run_one_user_agg.py, this one IS meant to retrain: the "final"
+Unlike experiments/run_one_user_agg.py, this one IS meant to retrain: the "final"
 checkpoints (not the dev/ ones, which are kept intact to avoid repeating the
 grid search) were moved beforehand to _pre_reviewid_fix_backup/, so
 KerasModelClass.__train_model__ finds no existing checkpoint and genuinely
@@ -13,7 +13,7 @@ already recorded in dev/log.csv) and hyperparameters as the original (buggy)
 run.
 
 Usage:
-    python run_one_retrain_amazon_fix.py --model USEM2ITM --dataset amazon --subset fashion --md5 b73849c1...
+    python legacy/run_one_retrain_amazon_fix.py --model USEM2ITM --dataset amazon --subset fashion --md5 b73849c1...
 """
 import argparse
 import json

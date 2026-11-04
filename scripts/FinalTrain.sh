@@ -26,7 +26,7 @@ for DATASET_NAME in ${!DATASETS[@]}; do
       TXT_PATH="scripts/out/"$DATASET_NAME"/$SUBSET_NAME/final/"
       mkdir -p $TXT_PATH
 
-      nohup /media/nas/pperez/conda/ns3/envs/ETeR-X/bin/python -u FinalTrain.py -model $MODEL_NAME -dataset $DATASET_NAME -subset $SUBSET_NAME > "$TXT_PATH"$MODEL_NAME".txt" &
+      nohup ${PYTHON:-python} -u experiments/FinalTrain.py -model $MODEL_NAME -dataset $DATASET_NAME -subset $SUBSET_NAME > "$TXT_PATH"$MODEL_NAME".txt" &
 
       echo "═══════ [$!] $MODEL_NAME ══════"
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from src.Common import parse_cmd_args, print_b, print_e
+from src.config import data_path
 import pandas as pd
 import numpy as np
 import nvgpu
@@ -80,12 +81,12 @@ else:
     language = "es" if subset in ["gijon", "madrid", "barcelona"] else "fr" if subset in ["paris"] else "en"
 
     if dataset == "restaurants":
-        base_path = "/media/nas/datasets/tripadvisor/restaurants/"
+        base_path = data_path("tripadvisor", "restaurants")
     elif dataset == "pois":
-        base_path = "/media/nas/datasets/tripadvisor/pois/"
+        base_path = data_path("tripadvisor", "pois")
         language = "es"  # They are all in Spanish
     elif dataset == "amazon":
-        base_path = "/media/nas/datasets/amazon/"
+        base_path = data_path("amazon")
 
     # DATASET CONFIG #######################################################################################################
 

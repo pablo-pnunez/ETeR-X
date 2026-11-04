@@ -14,9 +14,9 @@ tested) and measure how far p_hat falls, against:
 Sufficiency is measured by keeping only the k selected terms instead.
 
 Nothing is retrained: weights are loaded from the checkpoint listed in
-models/best_models.csv, like run_one_coldstart_eval.py.
+models/best_models.csv, like experiments/run_one_coldstart_eval.py.
 
-Usage: python faithfulness_eval.py --dataset restaurants --subset gijon [--gpu 0]
+Usage: python analysis/faithfulness_eval.py --dataset restaurants --subset gijon [--gpu 0]
                                    [--max_k 5] [--n_random 20] [--max_queries 5000]
 Output: results/faithfulness/<dataset>_<subset>.csv (+ _queries.csv)
 """

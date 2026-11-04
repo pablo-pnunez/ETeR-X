@@ -2,7 +2,7 @@
 """
 Pareto-front plot: accuracy (NDCG@10 / Recall@10) vs number of parameters.
 
-Companion to pareto_efficiency_plot.py (which uses CO2 emissions as the cost
+Companion to analysis/pareto_efficiency_plot.py (which uses CO2 emissions as the cost
 axis instead) for the Efficiency section (\\subsubsection{Efficiency},
 fig:efficiency) of the manuscript. Same 5 models (ETeR-X, USEM,
 BERT + the zero-shot EmbeddingGemma/Qwen3-Embedding baselines, known users).
@@ -14,7 +14,7 @@ for the two zero-shot embedding baselines it is the fixed pre-trained model
 size) vs the mean NDCG@10/Recall@10. A model is on the Pareto front if no
 other model has both fewer parameters and an equal-or-higher metric.
 
-Usage: python pareto_params_plot.py
+Usage: python analysis/pareto_params_plot.py
 Output: output/pareto_params_ndcg.pdf, output/pareto_params_recall.pdf
 """
 import csv
