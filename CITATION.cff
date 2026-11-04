@@ -6,6 +6,25 @@ type: software
 license: MIT
 repository-code: "https://github.com/pablo-pnunez/ETeR-X"
 authors:
-  - family-names: "Pérez"
+  - family-names: "Pérez-Núñez"
     given-names: "Pablo"
     email: "pabloperez@uniovi.es"
+  - family-names: "Bolón-Canedo"
+    given-names: "Verónica"
+  - family-names: "Luaces"
+    given-names: "Oscar"
+  - family-names: "Díez"
+    given-names: "Jorge"
+preferred-citation:
+  type: unpublished
+  title: "An efficient, explainable query-based recommender system robust to user cold-start"
+  authors:
+    - family-names: "Pérez-Núñez"
+      given-names: "Pablo"
+    - family-names: "Bolón-Canedo"
+      given-names: "Verónica"
+    - family-names: "Luaces"
+      given-names: "Oscar"
+    - family-names: "Díez"
+      given-names: "Jorge"
+  notes: "Under review"

@@ -11,7 +11,8 @@ written by previous customers, an intrinsically explainable association between
 relevant terms (nouns and adjectives, selected through part-of-speech filtering)
 and items, using a single shallow classifier. Because it never builds a user
 profile, it is by design robust to the *user cold-start* problem. The full
-methodology, datasets and results are described in the accompanying paper.
+methodology, datasets and results are described in the accompanying paper,
+*An efficient, explainable query-based recommender system robust to user cold-start* (Pablo Pérez-Núñez, Verónica Bolón-Canedo, Oscar Luaces and Jorge Díez).
 
 This README covers how to set up the environment and reproduce every result
 reported in the paper, from raw data to the final tables and figures.
@@ -95,7 +96,7 @@ Two baselines have additional, optional requirements:
 
 ## 2. Data
 
-Datasets are not distributed with this repository. Each loader in
+Datasets are not included in this repository. Each loader in
 `src/datasets/text_datasets/` expects a specific, pre-existing layout under
 `data_path` (a dataset-config key, see below):
 
@@ -109,11 +110,20 @@ Datasets are not distributed with this repository. Each loader in
   the relevant categories and place them under `{subset}/` with these two
   file names.
 - **Restaurants** (`RestaurantDataset`) and **POIs** (`POIDataset`): reviews
-  and item metadata scraped from TripAdvisor for a set of cities, stored as
+  and item metadata from TripAdvisor for a set of cities, stored as
   pickled DataFrames (`{data_path}/{subset}/reviews.pkl` +
   `restaurants.pkl` for restaurants; `{data_path}/DATA_byList/{subset}/df.pickle`
-  for POIs). This is an in-house crawl, not a public dataset; adapting either
-  loader's `load_subset()` method to a differently-sourced dataset with the
+  for POIs). Both are published on Zenodo (CC BY 4.0), one zip per city:
+  - TripAdvisor Restaurant Reviews: <https://zenodo.org/records/14622324>
+    (v2.0.0: Istanbul, Madrid, Barcelona, Gijón, Moscow). The paper's Paris and
+    New York City restaurant subsets are not in this version; they are in
+    v1.0.0 (<https://doi.org/10.5281/zenodo.5644892>).
+  - TripAdvisor Points of Interest: <https://zenodo.org/records/5749846>
+    (v1.0.0: Madrid, Barcelona, London, Paris, New York City).
+
+  Unzip each city under the layout above (the loaders expect the file names
+  listed there; rename or adapt `load_subset()` if an archive differs). To use
+  your own data instead, adapt the loader's `load_subset()` to a dataset with the
   same columns (`reviewId`, `userId`, `itemId`/`restaurantId`, `rating`,
   `date`, `text`, `title`) is the fastest path to using your own data.
 
@@ -273,6 +283,7 @@ not needed and can be left out.
 
 ## Citing
 
-The paper describing this system is currently under review; please contact
-the authors if you would like to cite this work ahead of publication. Software
+The paper describing this system, *An efficient, explainable query-based recommender system robust to user cold-start* (Pérez-Núñez, Bolón-Canedo, Luaces
+and Díez), is currently under review; please contact the authors if you would like to
+cite this work ahead of publication. Software
 citation metadata is in `CITATION.cff`; the code is released under the MIT license (`LICENSE`).
